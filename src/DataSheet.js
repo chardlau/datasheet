@@ -358,7 +358,6 @@ export default class DataSheet {
 
     // Update textarea settings if currently in edit mode
     if (this.isEditting) {
-      // TODO 首次打开时无法内容同步高度
       this.textarea.value = cell.value;
       this.textarea.style.left = `${rect.left}px`;
       this.textarea.style.top = `${rect.top}px`;
@@ -372,7 +371,12 @@ export default class DataSheet {
   }
 
   handleInput() {
-    this.textarea.style.height = `${this.textarea.scrollHeight}px`;
+    let scrollHeight = this.textarea.scrollHeight;
+    let maxHeight = this.canvasHeight > 100 ? this.canvasHeight : 100;
+    this.textarea.style['height'] = `${scrollHeight}px`;
+    if (scrollHeight > maxHeight) {
+      this.textarea.style['overflow'] = 'auto';
+    }
     if (this.focusCell) {
       this.focusCell.value = this.textarea.value;
       this.focusCell.renderText = null;
