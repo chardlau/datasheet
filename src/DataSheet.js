@@ -34,7 +34,6 @@
  * 3. 增加拖动框选功能
  * 4. 编辑状态下回车触发同列下一行的单元格处于选中状态
  * 5. 选中状态下的单元格响应键盘输入并进入编辑状态
- * 6. 组件改为外部传入div的引用或者id，组件内部创建canvas和textarea标签
  * Finished:
  * 1. 绘制基本表格的功能[Done]
  * 2. 绘制多行头部[Done]
@@ -50,10 +49,12 @@
  * 8. 优化单元格渲染方式，解决滚动卡顿问题（1.使用节点缓存[Won'tDo]; 2.优化可视单元格的筛选方式[Done]）
  * 9. 增加点击选中功能[Done]
  * 10. 增加编辑功能[Done]
+ * 11. 组件改为外部传入div的引用或者id，组件内部创建canvas和textarea标签[Done]
  */
 
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
 import * as util from './util';
+import PointerEventHandler from './handler';
 
 /**
  * Default column width
@@ -73,20 +74,12 @@ const defaultRowHeight = 32;
  * 基于CreateJs/EaselJS的Web游戏渲染框架实现的表格组件
  */
 export default class DataSheet {
-  constructor(target, input) {
-    const canvas = this.initCanvas(target);
-    this.inputDom = document.getElementById(input);
-    this.inputDom.addEventListener('keydown', (evt) => {
-      if (evt.key === 'Enter') { // Enter key event
-        this.isEditting = false;
-        this.render();
-        return false;
-      }
-    });
-    this.stage = this.initStage(canvas);
+  constructor(target) {
+    this.initDom(target);
+    this.stage = this.initStage(this.canvas);
 
     // 可视区域宽度高度
-    const rect = canvas.getBoundingClientRect();
+    const rect = this.canvas.getBoundingClientRect();
     this.canvasWidth = rect.width;
     this.canvasHeight = rect.height;
     // 全区域宽度高度
@@ -111,8 +104,35 @@ export default class DataSheet {
   }
 
   // 初始化canvas
-  initCanvas(target) {
-    return typeof target === 'string' ? document.getElementById(target) : target;
+  initDom(target) {
+    let root = typeof target === 'string' ? document.getElementById(target) : target;
+    this.canvas = document.createElement('canvas');
+    this.textarea = document.createElement('textarea');
+    root.append(this.canvas);
+    root.append(this.textarea);
+
+    root.style['display'] = 'block';
+    root.style['position'] = 'relative';
+
+    this.canvas.style['width'] = '100%';
+    this.canvas.style['height'] = '100%';
+    this.canvas.style['position'] = 'absolute';
+    this.canvas.style['left'] = '0';
+    this.canvas.style['top'] = '0';
+    this.canvas.style['touch-action'] = 'none';
+
+    this.textarea.style['position'] = 'absolute';
+    this.textarea.style['left'] = '-10000px';
+    this.textarea.style['overflow'] = 'hidden';
+    this.textarea.style['border-color'] = '#3691FF';
+    this.textarea.style['outline'] = 'none';
+    this.textarea.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Enter') { // Enter key event
+        this.isEditting = false;
+        this.render();
+        return false;
+      }
+    });
   }
 
   // 初始化stage
@@ -160,39 +180,27 @@ export default class DataSheet {
     }, false);
     // 桌面端Edge
     if (util.isEdge() && !util.isMobileBrowser()) {
-      stage.canvas.addEventListener('pointerdown', (evt) => {
-        if (evt.pointerType === 'touch') {
-          this.lastPointerX = evt.x;
-          this.lastPointerY = evt.y;
+      let handler = new PointerEventHandler();
+      handler.register(
+        stage.canvas,
+        (evt) => {
           evt.preventDefault();
-        }
-      });
-      stage.canvas.addEventListener('pointermove', (evt) => {
-        if (evt.pointerType === 'touch') {
-          let deltaX = this.lastPointerX - evt.x;
-          let deltaY = this.lastPointerY - evt.y;
-          this.lastPointerX = evt.x;
-          this.lastPointerY = evt.y;
+        },
+        (evt, deltaX, deltaY) => {
           this.updateScrollX(deltaX);
           this.updateScrollY(deltaY);
           if (this.isInnerScrolling(deltaY)) {
             evt.preventDefault();
           }
           this.render();
-        }
-      });
-      stage.canvas.addEventListener('pointerup', (evt) => {
-        if (evt.pointerType === 'touch') {
-          let deltaX = this.lastPointerX - evt.x;
-          let deltaY = this.lastPointerY - evt.y;
-          this.lastPointerX = null;
-          this.lastPointerY = null;
+        },
+        (evt, deltaX, deltaY) => {
           let config = { deltaX, deltaY };
           // 模拟滚动惯性
           Tween.get(config)
             .to({ deltaX: 0, deltaY: 0 }, 1000, Ease.getPowOut(2))
             .on('change', () => {
-              if (this.lastPointerX != null || this.lastPointerY != null) {
+              if (handler.isHandling()) {
                 Tween.removeAllTweens(config);
                 return;
               }
@@ -201,31 +209,8 @@ export default class DataSheet {
               this.render();
             });
         }
-      });
-      
+      );
     }
-    // 左键点击拖动
-    // stage.on('stagemousedown', (evt) => {
-    //   this.stageMovable = true;
-    //   this.lastX = evt.localX;
-    //   this.lastY = evt.localY;
-    // });
-    // stage.on('stagemouseup', (evt) => {
-    //   this.stageMovable = false;
-    //   this.lastX = evt.localX;
-    //   this.lastY = evt.localY;
-    // });
-    // stage.on('stagemousemove', (evt) => {
-    //   // 拖动方向与滚动方向相同
-    //   let deltaX = this.lastX - evt.localX;
-    //   let deltaY = this.lastY - evt.localY;
-    //   this.lastX = evt.localX;
-    //   this.lastY = evt.localY;
-    //   if (!this.stageMovable) return;
-    //   this.updateScrollX(deltaX);
-    //   this.updateScrollY(deltaY);
-    //   this.render();
-    // });
     return stage;
   }
 
@@ -326,18 +311,18 @@ export default class DataSheet {
     return container;
   }
 
-  handleCellClick (cell) {
+  handleCellClick(cell) {
     this.isEditting = false;
     this.focusCell = cell;
     this.render();
   }
 
-  handleCellDblclick () {
+  handleCellDblclick() {
     this.isEditting = true;
     this.render();
   }
 
-  render () {
+  render() {
     let visibleHeaders = this.getVisibleCells(this.headers, this.scrollX, 0, true);
     let visibleCells = this.getVisibleCells(this.cells, this.scrollX, this.scrollY, false);
 
@@ -353,8 +338,8 @@ export default class DataSheet {
 
   renderFocusCell(cell) {
     // Whatever happend, hide textarea and remove its handler
-    this.inputDom.style.left = '-9999px';
-    this.inputDom.removeEventListener('input', this._handleInput);
+    this.textarea.style.left = '-9999px';
+    this.textarea.removeEventListener('input', this._handleInput);
 
     if (!cell) return;
 
@@ -374,22 +359,22 @@ export default class DataSheet {
     // Update textarea settings if currently in edit mode
     if (this.isEditting) {
       // TODO 首次打开时无法内容同步高度
-      this.inputDom.value = cell.value;
-      this.inputDom.style.left = `${rect.left}px`;
-      this.inputDom.style.top = `${rect.top}px`;
-      this.inputDom.style.width = `${rect.right - rect.left}px`;
-      this.inputDom.style.height = `${rect.bottom - rect.top}px`;
-      this.inputDom.style['min-height'] = `${rect.bottom - rect.top}px`;
-      this.inputDom.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
+      this.textarea.value = cell.value;
+      this.textarea.style.left = `${rect.left}px`;
+      this.textarea.style.top = `${rect.top}px`;
+      this.textarea.style.width = `${rect.right - rect.left}px`;
+      this.textarea.style.height = `${rect.bottom - rect.top}px`;
+      this.textarea.style['min-height'] = `${rect.bottom - rect.top}px`;
+      this.textarea.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
       setTimeout(this._handleInput, 10); // Manually update textarea's height
-      this.inputDom.addEventListener('input', this._handleInput);
+      this.textarea.addEventListener('input', this._handleInput);
     }
   }
 
   handleInput() {
-    this.inputDom.style.height = `${this.inputDom.scrollHeight}px`;
+    this.textarea.style.height = `${this.textarea.scrollHeight}px`;
     if (this.focusCell) {
-      this.focusCell.value = this.inputDom.value;
+      this.focusCell.value = this.textarea.value;
       this.focusCell.renderText = null;
     }
   }
@@ -515,7 +500,7 @@ export default class DataSheet {
       }
       let y = this.canvasHeight * (this.scrollY / totalHeight);
       let height = Math.max(this.canvasHeight * (this.canvasHeight / totalHeight), 20);
-      this.vertical.graphics.clear().beginFill('rgba(0, 0, 0, 0.4)').drawRoundRect(0, 0, barSize, height, barSize/2);
+      this.vertical.graphics.clear().beginFill('rgba(0, 0, 0, 0.4)').drawRoundRect(0, 0, barSize, height, barSize / 2);
       this.vertical.x = this.canvasWidth - barSize;
       this.vertical.y = y;
       this.vertical.cursor = 'pointer';
@@ -538,7 +523,7 @@ export default class DataSheet {
       }
       let x = this.canvasWidth * (this.scrollX / this.totalWidth);
       let width = Math.max(this.canvasWidth * (this.canvasWidth / this.totalWidth), 20);
-      this.horizontal.graphics.clear().beginFill('rgba(0, 0, 0, 0.4)').drawRoundRect(0, 0, width, barSize, barSize/2);
+      this.horizontal.graphics.clear().beginFill('rgba(0, 0, 0, 0.4)').drawRoundRect(0, 0, width, barSize, barSize / 2);
       this.horizontal.x = x;
       this.horizontal.y = this.canvasHeight - barSize;
       this.horizontal.cursor = 'pointer';
@@ -557,8 +542,8 @@ export default class DataSheet {
    *  @param {Array} dataDesc 单元格描述对象组成的数组[{row, col, colSpan, rowSpan}]
    * }
    */
-  setOptions({columns, header, headerDesc, data, dataDesc}) {
-    const _columns  = (columns || []).sort((a, b) => {
+  setOptions({ columns, header, headerDesc, data, dataDesc }) {
+    const _columns = (columns || []).sort((a, b) => {
       let v1 = a.fixed === 'left' ? 2 : a.fixed === 'right' ? 0 : 1;
       let v2 = b.fixed === 'left' ? 2 : b.fixed === 'right' ? 0 : 1;
       return v2 - v1;
@@ -751,7 +736,7 @@ export default class DataSheet {
     if (
       typeof l1 !== 'number' || typeof t1 !== 'number' || typeof r1 !== 'number' || typeof b1 !== 'number' ||
       typeof l2 !== 'number' || typeof t2 !== 'number' || typeof r2 !== 'number' || typeof b2 !== 'number'
-    ) { 
+    ) {
       return null;
     }
     if (l1 >= r2 || t1 >= b2 || r1 <= l2 || b1 <= t2) return null;
