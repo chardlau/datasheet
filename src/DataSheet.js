@@ -53,8 +53,9 @@
  */
 
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
-import * as util from './util';
 import PointerEventHandler from './handler';
+import * as browser from './browser';
+import * as util from './util';
 
 /**
  * Default column width
@@ -179,7 +180,7 @@ export default class DataSheet {
       this.render();
     }, false);
     // 桌面端Edge
-    if (util.isEdge() && !util.isMobileBrowser()) {
+    if (browser.isEdge() && !browser.isMobileBrowser()) {
       let handler = new PointerEventHandler();
       handler.register(
         stage.canvas,
@@ -322,6 +323,19 @@ export default class DataSheet {
     this.render();
   }
 
+  handleInput() {
+    let scrollHeight = this.textarea.scrollHeight;
+    let maxHeight = this.canvasHeight > 100 ? this.canvasHeight : 100;
+    this.textarea.style['height'] = `${scrollHeight}px`;
+    if (scrollHeight > maxHeight) {
+      this.textarea.style['overflow'] = 'auto';
+    }
+    if (this.focusCell) {
+      this.focusCell.value = this.textarea.value;
+      this.focusCell.renderText = null;
+    }
+  }
+
   render() {
     let visibleHeaders = this.getVisibleCells(this.headers, this.scrollX, 0, true);
     let visibleCells = this.getVisibleCells(this.cells, this.scrollX, this.scrollY, false);
@@ -367,19 +381,6 @@ export default class DataSheet {
       this.textarea.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
       setTimeout(this._handleInput, 10); // Manually update textarea's height
       this.textarea.addEventListener('input', this._handleInput);
-    }
-  }
-
-  handleInput() {
-    let scrollHeight = this.textarea.scrollHeight;
-    let maxHeight = this.canvasHeight > 100 ? this.canvasHeight : 100;
-    this.textarea.style['height'] = `${scrollHeight}px`;
-    if (scrollHeight > maxHeight) {
-      this.textarea.style['overflow'] = 'auto';
-    }
-    if (this.focusCell) {
-      this.focusCell.value = this.textarea.value;
-      this.focusCell.renderText = null;
     }
   }
 
@@ -487,8 +488,8 @@ export default class DataSheet {
   renderScrollBar() {
     let barSize = 10;
     // 垂直
-    let totalHeight = this.totalHeight + this.headerHeight;
-    if (this.canvasHeight < totalHeight) {
+    let allHeight = this.totalHeight + this.headerHeight;
+    if (this.canvasHeight < allHeight) {
       if (!this.vertical) {
         this.vertical = new Shape();
         this.vertical.on('mousedown', (evt) => {
@@ -502,8 +503,8 @@ export default class DataSheet {
           this.render();
         });
       }
-      let y = this.canvasHeight * (this.scrollY / totalHeight);
-      let height = Math.max(this.canvasHeight * (this.canvasHeight / totalHeight), 20);
+      let y = this.canvasHeight * (this.scrollY / allHeight);
+      let height = Math.max(this.canvasHeight * (this.canvasHeight / allHeight), 20);
       this.vertical.graphics.clear().beginFill('rgba(0, 0, 0, 0.4)').drawRoundRect(0, 0, barSize, height, barSize / 2);
       this.vertical.x = this.canvasWidth - barSize;
       this.vertical.y = y;
@@ -602,7 +603,7 @@ export default class DataSheet {
           cell.x = this.canvasWidth - (this.totalWidth - cell.sourceX);
           cell.y = t;
           rows.push(cell);
-        } else if (this.isVisible(l, t, r, b, startY)) {
+        } else if (this.isCellVisible(l, t, r, b, startY)) {
           cell.x = l;
           cell.y = t;
           rows.push(cell);
@@ -617,13 +618,8 @@ export default class DataSheet {
     return !(b <= startY || t >= this.canvasHeight);
   }
 
-  // 判断指定左右边界的列是否可见
-  isColVisible(l, r) {
-    return !(r <= this.fixedLeftX || l >= this.fixedRightX);
-  }
-
   // 判断指定上下左右边界的单元格是否可见
-  isVisible(l, t, r, b, startY) {
+  isCellVisible(l, t, r, b, startY) {
     return !(b <= startY || t >= this.canvasHeight) && !(r <= this.fixedLeftX || l >= this.fixedRightX);
   }
 
@@ -708,47 +704,30 @@ export default class DataSheet {
     let result;
     if (cell.isHeader) {
       if (cell.fixed === 'left') {
-        result = this.getCrossRect(0, 0, this.fixedLeftX, this.headerHeight,
+        result = util.getCrossRect(0, 0, this.fixedLeftX, this.headerHeight,
           rect.left, rect.top, rect.right, rect.bottom);
       } else if (cell.fixed === 'right') {
-        result = this.getCrossRect(this.fixedRightX, 0, this.canvasWidth, this.headerHeight,
+        result = util.getCrossRect(this.fixedRightX, 0, this.canvasWidth, this.headerHeight,
           rect.left, rect.top, rect.right, rect.bottom);
       } else {
-        result = this.getCrossRect(this.fixedLeftX, 0, this.fixedRightX, this.headerHeight,
+        result = util.getCrossRect(this.fixedLeftX, 0, this.fixedRightX, this.headerHeight,
           rect.left, rect.top, rect.right, rect.bottom);
       }
     } else {
-      result = this.getCrossRect(0, 0, this.canvasWidth, this.canvasHeight,
+      result = util.getCrossRect(0, 0, this.canvasWidth, this.canvasHeight,
         rect.left, rect.top, rect.right, rect.bottom);
       if (!result) return null;
       if (cell.fixed === 'left') {
-        result = this.getCrossRect(0, this.headerHeight, this.fixedLeftX, this.canvasHeight,
+        result = util.getCrossRect(0, this.headerHeight, this.fixedLeftX, this.canvasHeight,
           rect.left, rect.top, rect.right, rect.bottom);
       } else if (cell.fixed === 'right') {
-        result = this.getCrossRect(this.fixedRightX, this.headerHeight, this.canvasWidth, this.canvasHeight,
+        result = util.getCrossRect(this.fixedRightX, this.headerHeight, this.canvasWidth, this.canvasHeight,
           rect.left, rect.top, rect.right, rect.bottom);
       } else {
-        result = this.getCrossRect(this.fixedLeftX, this.headerHeight, this.fixedRightX, this.canvasHeight,
+        result = util.getCrossRect(this.fixedLeftX, this.headerHeight, this.fixedRightX, this.canvasHeight,
           rect.left, rect.top, rect.right, rect.bottom);
       }
     }
     return result;
-  }
-
-  // 获取两个矩形的交集所形成的小矩形，无交集返回null
-  getCrossRect(l1, t1, r1, b1, l2, t2, r2, b2) {
-    if (
-      typeof l1 !== 'number' || typeof t1 !== 'number' || typeof r1 !== 'number' || typeof b1 !== 'number' ||
-      typeof l2 !== 'number' || typeof t2 !== 'number' || typeof r2 !== 'number' || typeof b2 !== 'number'
-    ) {
-      return null;
-    }
-    if (l1 >= r2 || t1 >= b2 || r1 <= l2 || b1 <= t2) return null;
-    let l = Math.max(l1, l2);
-    let t = Math.max(t1, t2);
-    let r = Math.min(r1, r2);
-    let b = Math.min(b1, b2);
-    if (l >= r || t >= b) return null;
-    return { left: l, top: t, right: r, bottom: b };
   }
 }

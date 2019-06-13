@@ -1,3 +1,7 @@
+
+/**
+ * Pointer event handler
+ */
 export default class PointerEventHandler {
   constructor() {
     this.pointerType = 'touch';

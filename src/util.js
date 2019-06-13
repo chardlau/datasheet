@@ -1,79 +1,27 @@
 /**
- * Browser tester
+ * Calculate cross rect of the two input react
+ * @param {Number} l1 left of 1st rect
+ * @param {Number} t1 top of 1st rect
+ * @param {Number} r1 right of 1st rect
+ * @param {Number} b1 bottom of 1st rect
+ * @param {Number} l2 left of 2nd rect
+ * @param {Number} t2 top of 2nd rect
+ * @param {Number} r2 right of 2nd rect
+ * @param {Number} b2 bottom of 2nd rect
+ * return rect object if exist, else null
  */
-const tester = function tester(testerFunc) {
-  let result = {
-    value: false
-  };
-
-  result.test = function (ua, vendor) {
-    result.value = testerFunc(ua, vendor);
-  };
-
-  return result;
-};
-const browsers = {
-  chrome: tester(function (ua, vendor) {
-    return /Chrome/.test(ua) && /Google/.test(vendor);
-  }),
-  edge: tester(function (ua) {
-    return /Edge/.test(ua);
-  }),
-  ie: tester(function (ua) {
-    return /Trident/.test(ua);
-  }),
-  // eslint-disable-next-line no-restricted-globals
-  ie8: tester(function () {
-    return !document.createTextNode('test').textContent;
-  }),
-  // eslint-disable-next-line no-restricted-globals
-  ie9: tester(function () {
-    return !!document.documentMode;
-  }),
-  mobile: tester(function (ua) {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-  }),
-  safari: tester(function (ua, vendor) {
-    return /Safari/.test(ua) && /Apple Computer/.test(vendor);
-  })
-};
-
-function setBrowserMeta() {
-  Object.keys(browsers).forEach(key => {
-    browsers[key].test(navigator.userAgent, navigator.vendor);
-  });
-}
-
-setBrowserMeta();
-
-export function isChrome() {
-  return browsers.chrome.value;
-}
-
-export function isEdge() {
-  return browsers.edge.value;
-}
-
-export function isIE() {
-  return browsers.ie.value;
-}
-
-export function isIE8() {
-  return browsers.ie8.value;
-}
-
-export function isIE9() {
-  return browsers.ie9.value;
-}
-
-export function isMSBrowser() {
-  return browsers.ie.value || browsers.edge.value;
-}
-
-export function isMobileBrowser() {
-  return browsers.mobile.value;
-}
-
-export function isSafari() {
-  return browsers.safari.value;
+export function getCrossRect(l1, t1, r1, b1, l2, t2, r2, b2) {
+  if (
+    typeof l1 !== 'number' || typeof t1 !== 'number' || typeof r1 !== 'number' || typeof b1 !== 'number' ||
+    typeof l2 !== 'number' || typeof t2 !== 'number' || typeof r2 !== 'number' || typeof b2 !== 'number'
+  ) {
+    return null;
+  }
+  if (l1 >= r2 || t1 >= b2 || r1 <= l2 || b1 <= t2) return null;
+  let l = Math.max(l1, l2);
+  let t = Math.max(t1, t2);
+  let r = Math.min(r1, r2);
+  let b = Math.min(b1, b2);
+  if (l >= r || t >= b) return null;
+  return { left: l, top: t, right: r, bottom: b };
 }
