@@ -29,7 +29,6 @@
 
 /**
  * TODOs:
- * 1. 增加基本的单元格样式配置
  * 2. 处理移动端浏览器的滑动事件
  * 3. 增加拖动框选功能
  * 4. 编辑状态下回车触发同列下一行的单元格处于选中状态
@@ -50,6 +49,7 @@
  * 9. 增加点击选中功能[Done]
  * 10. 增加编辑功能[Done]
  * 11. 组件改为外部传入div的引用或者id，组件内部创建canvas和textarea标签[Done]
+ * 12. 增加基本的单元格样式配置
  */
 
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
@@ -70,22 +70,27 @@ const defaultColWidth = 100;
  */
 const defaultRowHeight = 32;
 
-
 /**
  * 基于CreateJs/EaselJS的Web游戏渲染框架实现的表格组件
  */
 export default class DataSheet {
   constructor(target) {
     this.initDom(target);
-    this.stage = this.initStage(this.canvas);
+    this.initStage();
+    this.initValues();
+  }
+
+  initValues() {
+    const rect = this.canvas.getBoundingClientRect();
 
     // 可视区域宽度高度
-    const rect = this.canvas.getBoundingClientRect();
     this.canvasWidth = rect.width;
     this.canvasHeight = rect.height;
+
     // 全区域宽度高度
     this.totalWidth = 0;
     this.totalHeight = 0;
+
     // 滚动位置，相对于所有单元格
     this.scrollX = 0;
     this.scrollY = 0;
@@ -101,20 +106,32 @@ export default class DataSheet {
     this.focusCell = null;
     this.isEditting = false;
 
+    // textarea input event handler
     this._handleInput = this.handleInput.bind(this);
+
+    // default cell style
+    this.borderColor = '#CCC';
+    this.defaultCellStyle = {
+      paddingLeft: 4,
+      paddingRight: 4,
+      color: '#666',
+      fontSize: 12,
+      fontWeight: 'normal',
+      fontFamily: 'Arial',
+      backgroundColor: '#FFF',
+    };
+    // default header cell style
+    this.defaultHeaderStyle = {
+      color: '#242536',
+      fontSize: 14,
+      fontWeight: 'bold',
+      backgroundColor: '#F4F4F4',
+    };
   }
 
-  // 初始化canvas
+  // Initial root, canvas and textarea
   initDom(target) {
-    let root = typeof target === 'string' ? document.getElementById(target) : target;
     this.canvas = document.createElement('canvas');
-    this.textarea = document.createElement('textarea');
-    root.append(this.canvas);
-    root.append(this.textarea);
-
-    root.style['display'] = 'block';
-    root.style['position'] = 'relative';
-
     this.canvas.style['width'] = '100%';
     this.canvas.style['height'] = '100%';
     this.canvas.style['position'] = 'absolute';
@@ -122,6 +139,7 @@ export default class DataSheet {
     this.canvas.style['top'] = '0';
     this.canvas.style['touch-action'] = 'none';
 
+    this.textarea = document.createElement('textarea');
     this.textarea.style['position'] = 'absolute';
     this.textarea.style['left'] = '-10000px';
     this.textarea.style['overflow'] = 'hidden';
@@ -134,10 +152,17 @@ export default class DataSheet {
         return false;
       }
     });
+
+    let root = typeof target === 'string' ? document.getElementById(target) : target;
+    root.append(this.canvas);
+    root.append(this.textarea);
+    root.style['display'] = 'block';
+    root.style['position'] = 'relative';
   }
 
-  // 初始化stage
-  initStage(canvas) {
+  // Initial stage of Createjs/EaselJs
+  initStage() {
+    let canvas = this.canvas;
     let ctx = canvas.getContext('2d');
     let devicePixelRatio = window.devicePixelRatio || 1;
     let backingStoreRatio = (
@@ -155,19 +180,18 @@ export default class DataSheet {
     canvas.height = rect.height * ratio;
 
     let stage = new Stage(canvas);
-    // stage.enableDOMEvents(true);
     stage.enableMouseOver(10);
     stage.mouseEnabled = true;
     stage.mouseMoveOutside = true;
     stage.scaleX = stage.scaleY = ratio;
 
-    // Handle event
+    // Handle wheel event for most part of browsers
     stage.canvas.addEventListener('wheel', (evt) => {
-      // TODO
-      // jquery的定义
+      // TODO deltaMode is 1 or 2 need more explicit calculate
+      // * jquery defines:
       // lineHeight: parseInt($parent.css('fontSize'), 10) || parseInt($elem.css('fontSize'), 10) || 16;
       // pageHeight: $(elem).height();
-      // 这里定义
+      // * Here we defines:
       // lineHeight: 16
       // pageHeight: this.canvasHeight || rect.height
       let deltaX = evt.deltaMode === 1 ? evt.deltaX * 16 : evt.deltaMode === 2 ? evt.deltaX * this.canvasHeight : evt.deltaX;
@@ -179,7 +203,7 @@ export default class DataSheet {
       }
       this.render();
     }, false);
-    // 桌面端Edge
+    // For Desktop Edge browser, use pointer event to perform scolling cause it doesn't support wheel event
     if (browser.isEdge() && !browser.isMobileBrowser()) {
       let handler = new PointerEventHandler();
       handler.register(
@@ -212,7 +236,7 @@ export default class DataSheet {
         }
       );
     }
-    return stage;
+    this.stage = stage;
   }
 
   updateScrollX(deltaX) {
@@ -275,32 +299,26 @@ export default class DataSheet {
     let container = new Container();
     container.addChild(border, text);
 
-    // 更新单元格内容
-    let value;
-    if (cell.isHeader) { // 标题行
-      border.graphics.beginFill('#F4F4F4')
-        .beginStroke('#CCC')
-        .drawRect(0, 0, width, height);
-      text.color = '#242536';
-      value = cell.value || (cell.columns[cell.col] || {}).title || '';
-    } else {
-      border.graphics.beginFill('#FFF')
-        .beginStroke('#CCC')
-        .drawRect(0, 0, width, height);
-      text.color = '#666';
-      value = cell.value || '';
-    }
+    // default value for text
+    let defaultValue = cell.isHeader ? (cell.columns[cell.col] || {}).title || '' : '';
+    
+    // Update border
+    let style = cell.style || this.defaultCellStyle;
+    border.graphics.beginFill(style.backgroundColor)
+      .beginStroke(style.borderColor)
+      .drawRect(0, 0, width, height);
 
-    text.x = 2.0;
+    // update text
+    text.x = style.paddingLeft;
     text.y = height / 2.0;
     text.textBaseline = 'middle';
-    text.font = '12px Arial';
-    text.text = value;
-    // 计算文本长度
+    text.font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`.trim();
+    text.text = cell.value || defaultValue;
+    text.color = style.color;
     if (cell.renderText) {
       text.text = cell.renderText;
     } else {
-      cell.renderText = this.getEllipsisText(text, width);
+      cell.renderText = this.getEllipsisText(text, width - style.paddingLeft - style.paddingRight);
     }
 
     container.mouseEnabled = true;
@@ -547,7 +565,7 @@ export default class DataSheet {
    *  @param {Array} dataDesc 单元格描述对象组成的数组[{row, col, colSpan, rowSpan}]
    * }
    */
-  setOptions({ columns, header, headerDesc, data, dataDesc }) {
+  update({ columns, header, headerDesc, data, dataDesc }) {
     const _columns = (columns || []).sort((a, b) => {
       let v1 = a.fixed === 'left' ? 2 : a.fixed === 'right' ? 0 : 1;
       let v2 = b.fixed === 'left' ? 2 : b.fixed === 'right' ? 0 : 1;
@@ -623,6 +641,11 @@ export default class DataSheet {
     return !(b <= startY || t >= this.canvasHeight) && !(r <= this.fixedLeftX || l >= this.fixedRightX);
   }
 
+  getStyle(styles) {
+    let freeze = { borderColor: this.borderColor };
+    return Array.isArray(styles) ?  Object.assign({}, ...styles, freeze) : Object.assign({}, styles, freeze);
+  }
+
   // 获取单元格信息
   getCells(columns, data, desc, startY = 0) {
     let cells = [];
@@ -643,7 +666,9 @@ export default class DataSheet {
           height: defaultRowHeight,
           fixed: c.fixed,
           isHeader: d.isHeader || false,
-          columns: columns
+          columns: columns,
+          style: this.getStyle([this.defaultCellStyle, d.isHeader ? this.defaultHeaderStyle : null, c.style, d.style]),
+          formator: null
         };
         row.push(item);
         startX += c.width;
@@ -662,7 +687,7 @@ export default class DataSheet {
         console.warn('desc rule error: ', c);
         return;
       }
-      // 计算合并后的宽度
+      // Update width
       if (c.colSpan > 1) {
         let width = current.width;
         for (let i = 1; i < c.colSpan; i++) {
@@ -676,10 +701,14 @@ export default class DataSheet {
         current.width = width;
         current.merged = true;
       }
-      // 更新合并后的高度
+      // Update hight
       if (c.rowSpan > 1) {
         current.height = defaultRowHeight * Math.min(c.rowSpan, cells.length - c.row);
         current.merged = true;
+      }
+      // Update style
+      if (c.style) {
+        current.style = this.getStyle([current.style, c.style]);
       }
     });
 
@@ -690,6 +719,7 @@ export default class DataSheet {
       row.bottom = currentY + max;
       currentY += defaultRowHeight;
     });
+    console.log('cells: ', cells);
     return cells;
   }
 
