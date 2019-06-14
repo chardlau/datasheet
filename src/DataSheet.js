@@ -137,12 +137,12 @@ export default class DataSheet {
       }
     });
 
-    let root = typeof target === 'string' ? document.getElementById(target) : target;
-    root.append(this.canvas);
-    root.append(this.textarea);
-    root.style['display'] = 'block';
-    root.style['position'] = 'relative';
-    root.style['touch-action'] = 'none';
+    this.root = typeof target === 'string' ? document.getElementById(target) : target;
+    this.root.append(this.canvas);
+    this.root.append(this.textarea);
+    this.root.style['display'] = 'block';
+    this.root.style['box-sizing'] = 'border-box';
+    this.root.style['position'] = 'relative';
   }
 
   // Initial stage of Createjs/EaselJs
@@ -180,11 +180,12 @@ export default class DataSheet {
       // * Here we defines:
       // lineHeight: 16
       // pageHeight: this.canvasHeight || rect.height
+      this.canvas.focus();
       let deltaX = evt.deltaMode === 1 ? evt.deltaX * 16 : evt.deltaMode === 2 ? evt.deltaX * this.canvasHeight : evt.deltaX;
       let deltaY = evt.deltaMode === 1 ? evt.deltaY * 16 : evt.deltaMode === 2 ? evt.deltaY * this.canvasHeight : evt.deltaY;
       this.updateScrollX(deltaX);
       this.updateScrollY(deltaY);
-      if (this.shouldPreventDefault(deltaY)) {
+      if (this.shouldPreventDefault(deltaX)) {
         evt.preventDefault();
       }
       this.render();
@@ -200,7 +201,7 @@ export default class DataSheet {
         (evt, deltaX, deltaY) => {
           this.updateScrollX(deltaX);
           this.updateScrollY(deltaY);
-          if (this.shouldPreventDefault(deltaY)) {
+          if (this.shouldPreventDefault(deltaX)) {
             evt.preventDefault();
           }
           this.render();
@@ -249,12 +250,12 @@ export default class DataSheet {
 
   /**
    * Check whether should this component consume the scoll event.
-   * @param {Number} deltaY Delta of scroll Y
+   * @param {Number} deltaX Delta of scroll X
    */
-  shouldPreventDefault(deltaY) {
+  shouldPreventDefault(deltaX) {
     const max = Math.max(this.totalHeight - this.canvasHeight + this.headerHeight, 0);
-    // If `deltaY` too small means moving in horizontal direction, or scroll Y did not reach top or bottom edge
-    return Math.abs(deltaY) < 5 || (this.scrollY !== 0 && this.scrollY !== max);
+    // If moving in horizontal direction, or scroll Y did not reach top or bottom edge
+    return Math.abs(deltaX) > 0 || (this.scrollY !== 0 && this.scrollY !== max);
   }
 
   /**
