@@ -97,11 +97,15 @@ export default class DataSheet {
     // default cell style
     this.defaultCellStyle = {
       paddingLeft: 4,
+      paddingTop: 4,
       paddingRight: 4,
+      paddingBottom: 4,
       color: '#666',
       fontSize: 12,
       fontWeight: 'normal',
       fontFamily: 'Arial',
+      textAlign: 'left',  // left|start, right|end, center
+      verticalAlign: 'middle', // top, middle, bottom
       backgroundColor: '#FFF',
     };
     // default header cell style
@@ -309,12 +313,15 @@ export default class DataSheet {
       .drawRect(0, 0, width, height);
 
     // update text
-    text.x = style.paddingLeft;
-    text.y = height / 2.0;
-    text.textBaseline = 'middle';
+    text.textBaseline = (style.verticalAlign === 'middle' || style.verticalAlign === 'bottom') ? style.verticalAlign : 'top';
+    text.textAlign = style.textAlign;
     text.font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`.trim();
     text.text = cell.value || defaultValue;
     text.color = style.color;
+    text.x =  (style.textAlign === 'center') ? width / 2.0
+      : (style.textAlign === 'end' || style.textAlign === 'right') ? width - style.paddingRight : style.paddingLeft;
+    text.y = (style.verticalAlign === 'middle') ? height / 2.0
+      : (style.verticalAlign === 'bottom') ? height - style.paddingBottom : style.paddingTop; // height / 2.0;
 
     // Cell's `renderText` cache the ellipsis value for text component.
     // If cell value is updated, `renderText` should cover by null
