@@ -7,7 +7,7 @@ dataSheet.update(options);
 
 ### Options
 Options for DataSheet:
-1. columns
+#### columns
 
 Array of column description 
 
@@ -16,25 +16,35 @@ Array of column description
 * width
 * fixed: Only 'left' or 'right' is valid. ( Note：`fixed` will effect the final order of the column. 'left' fixed column will be sorted forward while 'right' fixed column will be backward.) 
 
-2. header [optional]
 
-3. headerDesc [optional]
+#### data [optional]
 
-4. data [optional]
+#### dataDesc [optional]
 
-5. dataDesc [optional]
+#### header [optional]
+
+Same with data.
+
+#### headerDesc [optional]
+
+Same with dataDesc.
+
 
 
 
 
 ### Config cell style
 Configuable style fields are:
-* paddingLeft
-* paddingRight
+* paddingLeft: Useless if textAlign is 'center'
+* paddingTop: Useless if verticalAlign is 'middle'
+* paddingRight: Useless if textAlign is 'center'
+* paddingBottom: Useless if verticalAlign is 'middle'
 * color: Color for text
 * fontSize
 * fontWeight
 * fontFamily: Only support one font at a time
+* textAlign: Supports left|start, right|end, center. Defalt 'left'
+* verticalAlign: , Supports top, middle, bottom. Default 'middle'
 * backgroundColor
 
 Default header cell style
