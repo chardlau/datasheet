@@ -4,54 +4,34 @@
 * scale number of data on web page.
 *
 * Copyright (c) 2019 chardlau.com<chardlau@outlook.com>.
-*
-* Permission is hereby granted, free of charge, to any person
-* obtaining a copy of this software and associated documentation
-* files (the "Software"), to deal in the Software without
-* restriction, including without limitation the rights to use,
-* copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the
-* Software is furnished to do so, subject to the following
-* conditions:
-*
-* The above copyright notice and this permission notice shall be
-* included in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-* OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-* HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-* OTHER DEALINGS IN THE SOFTWARE.
 */
 
 /**
  * TODOs:
- * 2. 处理移动端浏览器的滑动事件
+ * 1. Support custom cell render
+ * 2. Support scrolling in touch screen
  * 3. 增加拖动框选功能
  * 4. 编辑状态下回车触发同列下一行的单元格处于选中状态
  * 5. 选中状态下的单元格响应键盘输入并进入编辑状态
+ * 6. 让行高可配置
  * Finished:
- * 1. 绘制基本表格的功能[Done]
- * 2. 绘制多行头部[Done]
- * 3. 绘制左右固定列[Done]
- * 4. 合并单元格[Done]
- * 5. 列表可鼠标点击拖动[Disable]、滚轮滚动[Done]
- * 6. 增加滚动条[Done]
- * 7. 处理桌面端浏览器的TouchPad事件
+ * 1. Basic data sheet render[Done]
+ * 2. Support multi-row header[Done]
+ * 3. Support fixed left and fixed right column[Done]
+ * 4. Support cell merge[Done]
+ * 5. Support mouse wheel scrolling[Done]
+ * 6. Add scroll bar[Done]
+ * 7. Support touch pad scrolling with browsers listed below 
  *    {
  *      Mac: Firefox[Done]、Chrome[Done]、Safari[Done]
  *      Windows: Firefox[Done]、Chrome[Done]、Edge[Done]、IE11[Won'tDo]
  *    }
- * 8. 优化单元格渲染方式，解决滚动卡顿问题（1.使用节点缓存[Won'tDo]; 2.优化可视单元格的筛选方式[Done]）
- * 9. 增加点击选中功能[Done]
- * 10. 增加编辑功能[Done]
- * 11. 组件改为外部传入div的引用或者id，组件内部创建canvas和textarea标签[Done]
- * 12. 增加基本的单元格样式配置
+ * 8. Optimize visible cells calculation。O(m+n) m for row size, n for column size.[Done]
+ * 9. Support selected cell highlight[Done]
+ * 10. Support edit cell value[Done]
+ * 11. Create canvas and textarea internally[Done]
+ * 12. Support basic cell's style configuration
  */
-
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
 import PointerEventHandler from './handler';
 import * as browser from './browser';
@@ -71,7 +51,8 @@ const defaultColWidth = 100;
 const defaultRowHeight = 32;
 
 /**
- * 基于CreateJs/EaselJS的Web游戏渲染框架实现的表格组件
+ * A table component base on CreateJs/EaselJS for displaying large
+ * scale number of data on web page.
  */
 export default class DataSheet {
   constructor(target) {
@@ -83,34 +64,37 @@ export default class DataSheet {
   initValues() {
     const rect = this.canvas.getBoundingClientRect();
 
-    // 可视区域宽度高度
+    // canvas width and height
     this.canvasWidth = rect.width;
     this.canvasHeight = rect.height;
 
-    // 全区域宽度高度
+    // cell's total width and height, without header
     this.totalWidth = 0;
     this.totalHeight = 0;
 
-    // 滚动位置，相对于所有单元格
+    // header height
+    this.headerHeight = 0;
+
+    // scroll position
     this.scrollX = 0;
     this.scrollY = 0;
 
-    // 头部高度
-    this.headerHeight = 0;
-
-    // 固定列边界位置
+    // fixed column's edge position in x-axis
     this.fixedLeftX = 0;
     this.fixedRightX = 0;
 
-    // 当前选中单元格
+    // current selected cell
     this.focusCell = null;
+
+    // flag of whether selected cell is under editting
     this.isEditting = false;
 
     // textarea input event handler
     this._handleInput = this.handleInput.bind(this);
 
-    // default cell style
+    // border color
     this.borderColor = '#CCC';
+    // default cell style
     this.defaultCellStyle = {
       paddingLeft: 4,
       paddingRight: 4,
@@ -158,6 +142,7 @@ export default class DataSheet {
     root.append(this.textarea);
     root.style['display'] = 'block';
     root.style['position'] = 'relative';
+    root.style['touch-action'] = 'none';
   }
 
   // Initial stage of Createjs/EaselJs
@@ -180,13 +165,14 @@ export default class DataSheet {
     canvas.height = rect.height * ratio;
 
     let stage = new Stage(canvas);
+    stage.enableDOMEvents(true);
     stage.enableMouseOver(10);
     stage.mouseEnabled = true;
     stage.mouseMoveOutside = true;
     stage.scaleX = stage.scaleY = ratio;
 
     // Handle wheel event for most part of browsers
-    stage.canvas.addEventListener('wheel', (evt) => {
+    canvas.addEventListener('wheel', (evt) => {
       // TODO deltaMode is 1 or 2 need more explicit calculate
       // * jquery defines:
       // lineHeight: parseInt($parent.css('fontSize'), 10) || parseInt($elem.css('fontSize'), 10) || 16;
@@ -198,7 +184,7 @@ export default class DataSheet {
       let deltaY = evt.deltaMode === 1 ? evt.deltaY * 16 : evt.deltaMode === 2 ? evt.deltaY * this.canvasHeight : evt.deltaY;
       this.updateScrollX(deltaX);
       this.updateScrollY(deltaY);
-      if (this.isInnerScrolling(deltaY)) {
+      if (this.shouldPreventDefault(deltaY)) {
         evt.preventDefault();
       }
       this.render();
@@ -214,7 +200,7 @@ export default class DataSheet {
         (evt, deltaX, deltaY) => {
           this.updateScrollX(deltaX);
           this.updateScrollY(deltaY);
-          if (this.isInnerScrolling(deltaY)) {
+          if (this.shouldPreventDefault(deltaY)) {
             evt.preventDefault();
           }
           this.render();
@@ -261,14 +247,24 @@ export default class DataSheet {
     }
   }
 
-  // 判断是否为内部滚动
-  isInnerScrolling(deltaY) {
+  /**
+   * Check whether should this component consume the scoll event.
+   * @param {Number} deltaY Delta of scroll Y
+   */
+  shouldPreventDefault(deltaY) {
     const max = Math.max(this.totalHeight - this.canvasHeight + this.headerHeight, 0);
-    return Math.abs(deltaY) < 5 || this.scrollY !== 0 && this.scrollY !== max;
+    // If `deltaY` too small means moving in horizontal direction, or scroll Y did not reach top or bottom edge
+    return Math.abs(deltaY) < 5 || (this.scrollY !== 0 && this.scrollY !== max);
   }
 
-  // 获取省略文本
-  getEllipsisText(component, maxWidth) {
+  /**
+   * Get ellipsis text for Text component.
+   * @param {Object} component Text component of EaselJs
+   * @param {Object} cell Cell data info object
+   */
+  getEllipsisText(component, cell) {
+    let style = cell.style || {};
+    let maxWidth = cell.width - (style.paddingLeft || 0) - (style.paddingRight || 0);
     if (component.getMeasuredWidth() <= maxWidth) {
       return component.text;
     }
@@ -289,7 +285,10 @@ export default class DataSheet {
     return component.text;
   }
 
-  // 创建单元格
+  /**
+   * Create cell and update its content
+   * @param {Object} cell Cell object generated by `getVisibleCells`
+   */
   createCell(cell) {
     let width = cell.width;
     let height = cell.height;
@@ -315,10 +314,15 @@ export default class DataSheet {
     text.font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`.trim();
     text.text = cell.value || defaultValue;
     text.color = style.color;
+
+    // Cell's `renderText` cache the ellipsis value for text component.
+    // If cell value is updated, `renderText` should cover by null
     if (cell.renderText) {
+      // `renderText` exist
       text.text = cell.renderText;
     } else {
-      cell.renderText = this.getEllipsisText(text, width - style.paddingLeft - style.paddingRight);
+      // If `renderText` is not exist, calculate
+      cell.renderText = this.getEllipsisText(text, cell);
     }
 
     container.mouseEnabled = true;
@@ -402,7 +406,6 @@ export default class DataSheet {
     }
   }
 
-  // 绘制单元格
   renderCells(cells) {
     let nromal = [];
     let merged = [];
@@ -413,13 +416,12 @@ export default class DataSheet {
 
     let hasFocusCell = false;
     (cells || []).forEach((cell) => {
-      // 生成当前单元格
       let container = this.createCell(cell);
-      // 记录选中单元格
+      // Mark selected cell flag
       if (this.focusCell == cell) {
         hasFocusCell = true;
       }
-      // 分类
+      // Class cell into different layers
       if (cell.merged) {
         if (cell.fixed === 'left') {
           leftFixedMerged.push(container);
@@ -437,6 +439,7 @@ export default class DataSheet {
       }
     });
 
+    // Add to stage for render
     nromal.forEach((item) => {
       this.stage.addChild(item);
     });
@@ -458,9 +461,8 @@ export default class DataSheet {
     return hasFocusCell;
   }
 
-  // 绘制固定区域的边框渐变线
   renderFixedBorder() {
-    // 标题底部边线
+    // Header's bottom edge
     if (this.headerHeight && this.scrollY !== 0) {
       const top = new Shape();
       top.graphics.beginLinearGradientFill(
@@ -470,7 +472,7 @@ export default class DataSheet {
         .drawRect(0, this.headerHeight, this.canvasWidth, 4);
       this.stage.addChild(top);
     }
-    // 左侧固定列边线
+    // Fixed left columns's right edge
     if (this.fixedLeftX && this.scrollX !== 0) {
       const left = new Shape();
       left.graphics.beginLinearGradientFill(
@@ -480,7 +482,7 @@ export default class DataSheet {
         .drawRect(this.fixedLeftX, 0, 4, this.canvasHeight);
       this.stage.addChild(left);
     }
-    // 右侧固定列边线（TODO 未处理总宽度小于canvas的场景）
+    // Fixed right columns's left edge（TODO what if total width of columns smaller than canvas width）
     if (
       this.fixedRightX &&
       this.fixedRightX != this.canvasWidth &&
@@ -494,18 +496,17 @@ export default class DataSheet {
         .drawRect(this.fixedRightX - 4, 0, 4, this.canvasHeight);
       this.stage.addChild(right);
     }
-    // 全边框
+    // Render canvas border
     const border = new Shape();
     border.graphics.beginFill('transparent')
-      .beginStroke('#CCC')
+      .beginStroke(this.borderColor)
       .drawRect(0, 0, this.canvasWidth, this.canvasHeight);
     this.stage.addChild(border);
   }
 
-  // 绘制滚动条
   renderScrollBar() {
     let barSize = 10;
-    // 垂直
+    // vertical direction
     let allHeight = this.totalHeight + this.headerHeight;
     if (this.canvasHeight < allHeight) {
       if (!this.vertical) {
@@ -515,7 +516,7 @@ export default class DataSheet {
           this.lastScrollY = evt.stageY;
         });
         this.vertical.on('pressmove', (evt) => {
-          let deltaY = (evt.stageY - this.lastScrollY) / this.stage.scaleY; // stageY是像素为单位
+          let deltaY = (evt.stageY - this.lastScrollY) / this.stage.scaleY; // stageY must scale down
           this.lastScrollY = evt.stageY;
           this.updateScrollY(deltaY * this.totalHeight / this.canvasHeight);
           this.render();
@@ -529,7 +530,7 @@ export default class DataSheet {
       this.vertical.cursor = 'pointer';
       this.stage.addChild(this.vertical);
     }
-    // 水平
+    // horizontal direction
     if (this.canvasWidth < this.totalWidth) {
       if (!this.horizontal) {
         this.horizontal = new Shape();
@@ -538,7 +539,7 @@ export default class DataSheet {
           this.lastScrollX = evt.stageX;
         });
         this.horizontal.on('pressmove', (evt) => {
-          let deltaX = (evt.stageX - this.lastScrollX) / this.stage.scaleX;  // stageX是像素为单位
+          let deltaX = (evt.stageX - this.lastScrollX) / this.stage.scaleX;  // NOTE: stageX must scale down
           this.lastScrollX = evt.stageX;
           this.updateScrollX(deltaX * this.totalWidth / this.canvasWidth);
           this.render();
@@ -555,17 +556,17 @@ export default class DataSheet {
   }
 
   /**
-   * 更新数据
-   * @param {Mixed} options 配置对象
+   * Update data or setting
+   * @param {Object} options Data or setting for DataSheet
    * {
-   *  @param {Array} columns 列描述对象组成的数组[{ title, dataIndex, width, fixed(left|right) }]。注意：fixed会影响desc数据中的row序号
+   *  @param {Array} columns [{ title, dataIndex, width, fixed(left|right) }] Note: fixed will effect column's order
    *  @param {Array} header 行数据对象组成的数组[{ dataIndex1, dataIndex2 }]
    *  @param {Array} headerDesc 单元格描述对象组成的数组[{row, col, colSpan, rowSpan}]
    *  @param {Array} data 行数据对象组成的数组[{ dataIndex1, dataIndex2 }]
    *  @param {Array} dataDesc 单元格描述对象组成的数组[{row, col, colSpan, rowSpan}]
    * }
    */
-  update({ columns, header, headerDesc, data, dataDesc }) {
+  update({ columns, header, headerDesc, data, dataDesc, borderColor }) {
     const _columns = (columns || []).sort((a, b) => {
       let v1 = a.fixed === 'left' ? 2 : a.fixed === 'right' ? 0 : 1;
       let v2 = b.fixed === 'left' ? 2 : b.fixed === 'right' ? 0 : 1;
@@ -579,27 +580,37 @@ export default class DataSheet {
       return d;
     }) : [{ isHeader: true, columns: _columns }];
 
-    // 头部数据高度
+    // Update border color
+    if (borderColor) this.borderColor = borderColor;
+
+    // Update header height
     this.headerHeight = this.getHeaderHeight(_header);
 
-    // 更新全区域宽度高度
+    // Update cells's total height
     this.totalHeight = (data || []).length * defaultRowHeight; // TODO 考虑增加最后一行的合并后的高度
     this.totalWidth = _columns.reduce((sum, c) => (sum + c.width), 0);
 
-    // 固定列边界位置
+    // Update fixed columns's edge position
     const lFixedCols = _columns.filter(i => i.fixed === 'left');
     const rFixedCols = _columns.filter(i => i.fixed === 'right');
     this.fixedLeftX = lFixedCols.reduce((sum, c) => (sum + c.width), 0);
     this.fixedRightX = Math.max(this.canvasWidth - rFixedCols.reduce((sum, c) => (sum + c.width), 0), 0);
 
-    // 单元格数据
+    // Calculate cell infos
     this.headers = this.getCells(_columns, _header, headerDesc, 0);
     this.cells = this.getCells(_columns, data, dataDesc, this.headerHeight);
 
     this.render();
   }
 
-  // 计算区域内可视行数据
+  /**
+   * Get visible cells
+   * @param {Array} cells cell informations from `getCells` function
+   * @param {*} scrollX scroll x
+   * @param {*} scrollY scroll y
+   * @param {*} isHeader flag for judging cell type
+   * @return Array of visible cells
+   */
   getVisibleCells(cells, scrollX = 0, scrollY = 0, isHeader = false) {
     let rows = [];
     let startY = isHeader ? 0 : this.headerHeight;
@@ -631,25 +642,35 @@ export default class DataSheet {
     return rows;
   }
 
-  // 判断指定上下边界的行是否可见
   isRowVisible(t, b, startY) {
     return !(b <= startY || t >= this.canvasHeight);
   }
 
-  // 判断指定上下左右边界的单元格是否可见
   isCellVisible(l, t, r, b, startY) {
     return !(b <= startY || t >= this.canvasHeight) && !(r <= this.fixedLeftX || l >= this.fixedRightX);
   }
 
-  getStyle(styles) {
+  /**
+   * Get style for cell.
+   * @param {Mixed} styles Style array or object.
+   * If array provided, fields from higher index item will cover the lower one
+   * @return style object
+   */
+  getCellStyle(styles) {
     let freeze = { borderColor: this.borderColor };
     return Array.isArray(styles) ?  Object.assign({}, ...styles, freeze) : Object.assign({}, styles, freeze);
   }
 
-  // 获取单元格信息
+  /**
+   * Calculate cells information
+   * @param {*} columns columns from `update` fonction
+   * @param {*} data header or cell data from `update` fonction.
+   * @param {*} desc description for header or cell data
+   * @param {*} startY start Y position. Which effect the cell's `sourceX`
+   */
   getCells(columns, data, desc, startY = 0) {
     let cells = [];
-    // 生成单元格矩阵
+    // Get infos from columns and data
     for (let i = 0; i < (data || []).length; i++) {
       let d = data[i] || {};
       let startX = 0;
@@ -667,7 +688,7 @@ export default class DataSheet {
           fixed: c.fixed,
           isHeader: d.isHeader || false,
           columns: columns,
-          style: this.getStyle([this.defaultCellStyle, d.isHeader ? this.defaultHeaderStyle : null, c.style, d.style]),
+          style: this.getCellStyle([this.defaultCellStyle, d.isHeader ? this.defaultHeaderStyle : null, c.style, d.style]),
           formator: null
         };
         row.push(item);
@@ -675,7 +696,7 @@ export default class DataSheet {
       }
       cells.push(row);
     }
-    // 统计合并信息
+    // Update with desc
     (desc || []).forEach((c) => {
       let row = cells[c.row];
       if (!row) {
@@ -692,9 +713,9 @@ export default class DataSheet {
         let width = current.width;
         for (let i = 1; i < c.colSpan; i++) {
           let cell = row[c.col + i];
-          // 相邻列不存在，终止继续合并
+          // Neighbou cell do not exist
           if (!cell) break;
-          // 不同为固定列或不是同类型固定列，终止继续合并
+          // Cells in different type of columns can't merge together
           if (current.fixed !== cell.fixed) break;
           width += cell.width;
         }
@@ -708,7 +729,7 @@ export default class DataSheet {
       }
       // Update style
       if (c.style) {
-        current.style = this.getStyle([current.style, c.style]);
+        current.style = this.getCellStyle([current.style, c.style]);
       }
     });
 
@@ -719,16 +740,17 @@ export default class DataSheet {
       row.bottom = currentY + max;
       currentY += defaultRowHeight;
     });
-    console.log('cells: ', cells);
     return cells;
   }
 
-  // 获取表头高度
   getHeaderHeight(header) {
     return defaultRowHeight * (header && header.length > 0 ? header.length : 0);
   }
 
-  // 获取单元格
+  /**
+   * Get rect that is specific cell crosses with other reasonable areas.
+   * @param {Object} cell Cell info object
+   */
   getCrossCellRect(cell) {
     let rect = { left: cell.x, top: cell.y, right: cell.x + cell.width, bottom: cell.y + cell.height };
     let result;
