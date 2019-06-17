@@ -134,8 +134,9 @@ export default class DataSheet {
     this.textarea.style['overflow'] = 'hidden';
     this.textarea.style['border-color'] = '#3691FF';
     this.textarea.style['outline'] = 'none';
-    this.textarea.style['z-index'] = '6';
-    this.textarea.style['display'] = 'none';
+    this.textarea.style['z-index'] = '4';
+    this.textarea.style['display'] = 'block';
+    // Listen keyboard event
     this.textarea.addEventListener('keydown', (evt) => {
       if (evt.key === 'Enter' && evt.target == this.textarea) { // Enter key event
         evt.preventDefault();
@@ -144,6 +145,8 @@ export default class DataSheet {
         this.hideTextArea();
         this.render();
         return false;
+      } else {
+        this.handleBeginEdit(evt);
       }
     }, false);
 
@@ -181,11 +184,6 @@ export default class DataSheet {
     stage.mouseMoveOutside = true;
     stage.scaleX = stage.scaleY = ratio;
 
-    // Handle keyboard event
-    document.addEventListener('keydown', (evt) => {
-      this.handleBeginEdit(evt);
-    }, false);
-
     // Handle wheel event for most part of browsers
     canvas.addEventListener('wheel', (evt) => {
       // TODO deltaMode is 1 or 2 need more explicit calculate
@@ -195,7 +193,6 @@ export default class DataSheet {
       // * Here we defines:
       // lineHeight: 16
       // pageHeight: this.canvasHeight || rect.height
-      this.canvas.focus();
       let deltaX = evt.deltaMode === 1 ? evt.deltaX * 16 : evt.deltaMode === 2 ? evt.deltaX * this.canvasHeight : evt.deltaX;
       let deltaY = evt.deltaMode === 1 ? evt.deltaY * 16 : evt.deltaMode === 2 ? evt.deltaY * this.canvasHeight : evt.deltaY;
       this.updateScrollX(deltaX);
@@ -368,9 +365,8 @@ export default class DataSheet {
     this.showTextArea(this.focusCell, rect);
   }
 
-  handleBeginEdit (evt) {
-    evt = evt || window.event;
-    if (this.isEditting || !this.focusCell || evt.target == this.textarea) return;
+  handleBeginEdit () {
+    if (this.isEditting || !this.focusCell) return;
     // Enable textarea for editing
     this.isEditting = true;
     this.focusCell.value = '';
@@ -431,8 +427,7 @@ export default class DataSheet {
   }
 
   hideTextArea() {
-    this.textarea.blur();
-    this.textarea.style['display'] = 'none';
+    this.textarea.style['z-index'] = '4';
     this.textarea.removeEventListener('input', this._handleInput);
   }
 
@@ -442,11 +437,10 @@ export default class DataSheet {
     this.textarea.style.top = `${rect.top}px`;
     this.textarea.style.width = `${rect.right - rect.left}px`;
     this.textarea.style.height = `${rect.bottom - rect.top}px`;
-    this.textarea.style['display'] = 'block';
+    this.textarea.style['z-index'] = '6';
     this.textarea.style['min-width'] = `${Math.max(rect.right - rect.left, cell.width, 100)}px`;
     this.textarea.style['min-height'] = `${rect.bottom - rect.top}px`;
     this.textarea.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
-    this.textarea.focus();
     this.textarea.addEventListener('input', this._handleInput);
     if (adjustHeight) {
       setTimeout(this._handleInput, 10);
@@ -454,7 +448,8 @@ export default class DataSheet {
   }
 
   updateTextArea(left, top) {
-    this.textarea.style['display'] = 'block';
+    this.textarea.focus();
+    this.textarea.style['z-index'] = '6';
     this.textarea.style.left = `${left}px`;
     this.textarea.style.top = `${top}px`;
   }
