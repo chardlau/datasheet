@@ -126,6 +126,7 @@ export default class DataSheet {
     this.canvas.style['left'] = '0';
     this.canvas.style['top'] = '0';
     this.canvas.style['touch-action'] = 'none';
+    this.canvas.style['z-index'] = '5';
 
     this.textarea = document.createElement('textarea');
     this.textarea.style['position'] = 'absolute';
@@ -133,13 +134,18 @@ export default class DataSheet {
     this.textarea.style['overflow'] = 'hidden';
     this.textarea.style['border-color'] = '#3691FF';
     this.textarea.style['outline'] = 'none';
+    this.textarea.style['z-index'] = '6';
+    this.textarea.style['display'] = 'none';
     this.textarea.addEventListener('keydown', (evt) => {
-      if (evt.key === 'Enter') { // Enter key event
+      if (evt.key === 'Enter' && evt.target == this.textarea) { // Enter key event
+        evt.preventDefault();
+        evt.stopPropagation();
         this.isEditting = false;
+        this.hideTextArea();
         this.render();
         return false;
       }
-    });
+    }, false);
 
     this.root = typeof target === 'string' ? document.getElementById(target) : target;
     this.root.append(this.canvas);
@@ -174,6 +180,11 @@ export default class DataSheet {
     stage.mouseEnabled = true;
     stage.mouseMoveOutside = true;
     stage.scaleX = stage.scaleY = ratio;
+
+    // Handle keyboard event
+    document.addEventListener('keydown', (evt) => {
+      this.handleBeginEdit(evt);
+    }, false);
 
     // Handle wheel event for most part of browsers
     canvas.addEventListener('wheel', (evt) => {
@@ -345,12 +356,26 @@ export default class DataSheet {
   handleCellClick(cell) {
     this.isEditting = false;
     this.focusCell = cell;
+    this.textarea.focus();
+    this.textarea.style['left'] = `${cell.x}px`;
+    this.textarea.style['top'] = `${cell.y}px`;
     this.render();
   }
 
   handleCellDblclick() {
     this.isEditting = true;
-    this.render();
+    let rect = this.getCrossCellRect(this.focusCell);
+    this.showTextArea(this.focusCell, rect);
+  }
+
+  handleBeginEdit (evt) {
+    evt = evt || window.event;
+    if (this.isEditting || !this.focusCell || evt.target == this.textarea) return;
+    // Enable textarea for editing
+    this.isEditting = true;
+    this.focusCell.value = '';
+    let rect = this.getCrossCellRect(this.focusCell);
+    this.showTextArea(this.focusCell, rect, false);
   }
 
   handleInput() {
@@ -382,8 +407,7 @@ export default class DataSheet {
 
   renderFocusCell(cell) {
     // Whatever happend, hide textarea and remove its handler
-    this.textarea.style.left = '-9999px';
-    this.textarea.removeEventListener('input', this._handleInput);
+    this.hideTextArea();
 
     if (!cell) return;
 
@@ -402,16 +426,37 @@ export default class DataSheet {
 
     // Update textarea settings if currently in edit mode
     if (this.isEditting) {
-      this.textarea.value = cell.value;
-      this.textarea.style.left = `${rect.left}px`;
-      this.textarea.style.top = `${rect.top}px`;
-      this.textarea.style.width = `${rect.right - rect.left}px`;
-      this.textarea.style.height = `${rect.bottom - rect.top}px`;
-      this.textarea.style['min-height'] = `${rect.bottom - rect.top}px`;
-      this.textarea.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
-      setTimeout(this._handleInput, 10); // Manually update textarea's height
-      this.textarea.addEventListener('input', this._handleInput);
+      this.updateTextArea(rect.left, rect.top);
     }
+  }
+
+  hideTextArea() {
+    this.textarea.blur();
+    this.textarea.style['display'] = 'none';
+    this.textarea.removeEventListener('input', this._handleInput);
+  }
+
+  showTextArea(cell, rect, adjustHeight = true) {
+    this.textarea.value = cell.value;
+    this.textarea.style.left = `${rect.left}px`;
+    this.textarea.style.top = `${rect.top}px`;
+    this.textarea.style.width = `${rect.right - rect.left}px`;
+    this.textarea.style.height = `${rect.bottom - rect.top}px`;
+    this.textarea.style['display'] = 'block';
+    this.textarea.style['min-width'] = `${Math.max(rect.right - rect.left, cell.width, 100)}px`;
+    this.textarea.style['min-height'] = `${rect.bottom - rect.top}px`;
+    this.textarea.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
+    this.textarea.focus();
+    this.textarea.addEventListener('input', this._handleInput);
+    if (adjustHeight) {
+      setTimeout(this._handleInput, 10);
+    }
+  }
+
+  updateTextArea(left, top) {
+    this.textarea.style['display'] = 'block';
+    this.textarea.style.left = `${left}px`;
+    this.textarea.style.top = `${top}px`;
   }
 
   renderCells(cells) {
