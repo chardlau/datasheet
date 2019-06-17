@@ -10,10 +10,8 @@
  * TODOs:
  * 1. Support custom cell render
  * 2. Support scrolling in touch screen
- * 3. 增加拖动框选功能
- * 4. 编辑状态下回车触发同列下一行的单元格处于选中状态
- * 5. 选中状态下的单元格响应键盘输入并进入编辑状态
- * 6. 让行高可配置
+ * 3. 编辑状态下回车触发同列下一行的单元格处于选中状态
+ * 4. 让行高可配置
  * Finished:
  * 1. Basic data sheet render[Done]
  * 2. Support multi-row header[Done]
@@ -30,7 +28,8 @@
  * 9. Support selected cell highlight[Done]
  * 10. Support edit cell value[Done]
  * 11. Create canvas and textarea internally[Done]
- * 12. Support basic cell's style configuration
+ * 12. Support basic cell's style configuration[Done]
+ * 13. Selected cell listens keyboard event and enter edit mode[Done]
  */
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
 import PointerEventHandler from './handler';
