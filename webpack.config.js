@@ -8,6 +8,6 @@ module.exports = {
     libraryTarget: 'umd'
   },
   devServer: {
-    contentBase: path.join(__dirname, 'samples')
+    contentBase: path.join(__dirname, 'example')
   }
 };
