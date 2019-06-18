@@ -12,8 +12,13 @@
     "canvas",
     "easeljs"
   ],
-  "author": "ChardLau <chardlau@outlook.com>",
+  "author": "chardlau",
+  "homepage": "https://github.com/chardlau/simple-datasheet",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:chardlau/simple-datasheet.git"
+  },
   "dependencies": {
     "createjs-module": "^0.8.3"
   },

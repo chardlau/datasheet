@@ -13,7 +13,7 @@ Create DataSheet and update options.
 
 ``` javascript
 var options = {...};
-var dataSheet = new DataSheet("myCanvasContainer");
+var dataSheet = new DataSheet("target");
 dataSheet.update(options);
 ```
 
@@ -72,7 +72,7 @@ Configuable style fields are:
 * backgroundColor
 
 Default header cell style
-``` json
+```
 {
   paddingLeft: 4,
   paddingRight: 4,
@@ -84,7 +84,7 @@ Default header cell style
 }
 ```
 Default header cell style
-``` json
+```
 {
   paddingLeft: 4,
   paddingRight: 4,
