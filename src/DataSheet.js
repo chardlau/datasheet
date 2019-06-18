@@ -10,8 +10,8 @@
  * TODOs:
  * 1. Support custom cell render
  * 2. Support scrolling in touch screen
- * 3. 编辑状态下回车触发同列下一行的单元格处于选中状态
- * 4. 让行高可配置
+ * 3. Handle 'Tab' and 'Enter' keyboard event
+ * 4. Make row height configurable
  * Finished:
  * 1. Basic data sheet render[Done]
  * 2. Support multi-row header[Done]
@@ -431,7 +431,7 @@ export default class DataSheet {
   }
 
   showTextArea(cell, rect, adjustHeight = true) {
-    this.textarea.value = cell.value;
+    this.textarea.value = cell.value || '';
     this.textarea.style.left = `${rect.left}px`;
     this.textarea.style.top = `${rect.top}px`;
     this.textarea.style.width = `${rect.right - rect.left}px`;
@@ -621,7 +621,7 @@ export default class DataSheet {
       let v1 = a.fixed === 'left' ? 2 : a.fixed === 'right' ? 0 : 1;
       let v2 = b.fixed === 'left' ? 2 : b.fixed === 'right' ? 0 : 1;
       // Make sure sort is stable, we use item's index as fallback element
-      return v2 - v1 === 0 ? b.i - a.i : v2 - v1;
+      return v2 - v1 === 0 ? a.i - b.i : v2 - v1;
     }).map((d) => {
       d.width = d.width > 0 ? d.width : defaultColWidth;
       return d;

@@ -1,0 +1,98 @@
+<html>
+  <head>
+    <title>DataSheet Samples</title>
+  </head>
+  <script src='/main.js'></script>
+<body>
+  Simple DataSheet
+  <div id="target1" style="height: 300px;"></div>
+
+  Complex DataSheet
+  <div id="target2" style="height: 300px;"></div>
+
+  <script>
+    var i;
+    // simple
+    var dataSheet1 = new DataSheet("target1");
+    var columns1 = [
+      { title: '标题1', width: 150, dataIndex: 'index1' },
+      { title: '标题2', width: 100, dataIndex: 'index2' },
+      { title: '标题3', width: 150, dataIndex: 'index3' },
+      { title: '标题4', width: 200, dataIndex: 'index4' },
+      { title: '标题5', width: 200, dataIndex: 'index5' },
+      { title: '标题6', width: 200, dataIndex: 'index6' },
+      { title: '标题7', width: 150, dataIndex: 'index7' },
+      { title: '标题8', width: 150, dataIndex: 'index8' },
+      { title: '标题9', width: 150, dataIndex: 'index9' },
+    ];
+    var data1 = [];
+    for (i = 0; i < 100; i++) {
+      let item = {};
+      columns1.forEach(c => {
+        item[c.dataIndex] = 'row' + i + '-' + c.dataIndex;
+      });
+      data1.push(item);
+    }
+    dataSheet1.update({ columns: columns1, data: data1 });
+
+    // complex
+    var dataSheet2 = new DataSheet("target2");
+    var commonStyle = { backgroundColor: '#b4ddea', color: '#2996b0' };
+    var columns2 = [
+      { title: '标题1', width: 150, dataIndex: 'index1', fixed: 'left', style: commonStyle },
+      { title: '标题2', width: 100, dataIndex: 'index2', fixed: 'left', style: commonStyle },
+      { title: '标题3', width: 150, dataIndex: 'index3' },
+      { title: '标题4', width: 200, dataIndex: 'index4' },
+      { title: '标题5', width: 200, dataIndex: 'index5' },
+      { title: '标题6', width: 200, dataIndex: 'index6' },
+      { title: '标题7', width: 150, dataIndex: 'index7' },
+      { title: '标题8', width: 150, dataIndex: 'index8', fixed: 'right' },
+      { title: '标题9', width: 150, dataIndex: 'index9', fixed: 'right' },
+    ];
+    var header2 = [];
+    for (i = 0; i < 2; i++) {
+      let item = {
+        style: {
+          textAlign: 'center',
+          verticalAlign: 'middle'
+        }
+      };
+      columns2.forEach(c => {
+        item[c.dataIndex] = 'header' + i + '-' + c.dataIndex;
+      });
+      header2.push(item);
+    }
+    var data2 = [];
+    for (i = 0; i < 100; i++) {
+      let item = {};
+      columns2.forEach(c => {
+        item[c.dataIndex] = 'row' + i + '-' + c.dataIndex;
+      });
+      data2.push(item);
+    }
+    var dataDesc2 = [];
+    for (i = 0; i < 50; i++) {
+      columns2.forEach((c, index) => {
+        if (index % 2 !== 0) return;
+        let item = {
+          row: i * 2,
+          col: index,
+          colSpan: 2
+        };
+        dataDesc2.push(item);
+      });
+    }
+    dataSheet2.update({
+      columns: columns2,
+      header: header2,
+      headerDesc: [
+        { row: 0, col: 0, colSpan: 2 },
+        { row: 0, col: 2, colSpan: 5, style: commonStyle },
+        { row: 0, col: 7, colSpan: 2 },
+      ],
+      data: data2,
+      dataDesc: dataDesc2
+    });
+  </script>
+</body>
+</html>
