@@ -614,10 +614,14 @@ export default class DataSheet {
    * }
    */
   update({ columns, header, headerDesc, data, dataDesc, borderColor }) {
-    const _columns = (columns || []).sort((a, b) => {
+    const _columns = (columns || []).map((i, index)=> {
+      i.i = index;
+      return i;
+    }).sort((a, b) => {
       let v1 = a.fixed === 'left' ? 2 : a.fixed === 'right' ? 0 : 1;
       let v2 = b.fixed === 'left' ? 2 : b.fixed === 'right' ? 0 : 1;
-      return v2 - v1;
+      // Make sure sort is stable, we use item's index as fallback element
+      return v2 - v1 === 0 ? b.i - a.i : v2 - v1;
     }).map((d) => {
       d.width = d.width > 0 ? d.width : defaultColWidth;
       return d;
