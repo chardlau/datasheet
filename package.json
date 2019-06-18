@@ -1,5 +1,5 @@
 {
-  "name": "chardlau-datasheet",
+  "name": "simple-datasheet",
   "version": "0.0.1",
   "description": "A table component base on CreateJs/EaselJS for displaying large scale number of data on web page.",
   "main": "index.js",
@@ -13,7 +13,7 @@
     "easeljs"
   ],
   "author": "ChardLau <chardlau@outlook.com>",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "createjs-module": "^0.8.3"
   },
