@@ -64,7 +64,9 @@
     }
     var data2 = [];
     for (i = 0; i < 100; i++) {
-      let item = {};
+      let item = {
+        style: { color: 'green' }
+      };
       columns2.forEach(c => {
         item[c.dataIndex] = 'row' + i + '-' + c.dataIndex;
       });
@@ -77,7 +79,7 @@
         let item = {
           row: i * 2,
           col: index,
-          colSpan: 2
+          colSpan: 2,
         };
         dataDesc2.push(item);
       });
@@ -86,7 +88,7 @@
       columns: columns2,
       header: header2,
       headerDesc: [
-        { row: 0, col: 0, colSpan: 2 },
+        { row: 0, col: 0, colSpan: 2, render: () => 'Render Value' },
         { row: 0, col: 2, colSpan: 5, style: commonStyle },
         { row: 0, col: 7, colSpan: 2 },
       ],

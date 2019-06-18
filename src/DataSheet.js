@@ -8,10 +8,9 @@
 
 /**
  * TODOs:
- * 1. Support custom cell render
- * 2. Support scrolling in touch screen
- * 3. Handle 'Tab' and 'Enter' keyboard event
- * 4. Make row height configurable
+ * 1. Support scrolling in touch screen
+ * 2. Handle 'Tab' and 'Enter' keyboard event
+ * 3. Make row height configurable
  * Finished:
  * 1. Basic data sheet render[Done]
  * 2. Support multi-row header[Done]
@@ -30,6 +29,7 @@
  * 11. Create canvas and textarea internally[Done]
  * 12. Support basic cell's style configuration[Done]
  * 13. Selected cell listens keyboard event and enter edit mode[Done]
+ * 14. Support custom cell text format[Done]
  */
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
 import PointerEventHandler from './handler';
@@ -320,10 +320,15 @@ export default class DataSheet {
       .drawRect(0, 0, width, height);
 
     // update text
+    let value = cell.value || defaultValue;
+    if (cell.render && typeof cell.render === 'function') {
+      value = cell.render(value, cell);
+    }
+
+    text.text = value;
     text.textBaseline = (style.verticalAlign === 'middle' || style.verticalAlign === 'bottom') ? style.verticalAlign : 'top';
     text.textAlign = style.textAlign;
     text.font = `${style.fontWeight} ${style.fontSize}px ${style.fontFamily}`.trim();
-    text.text = cell.value || defaultValue;
     text.color = style.color;
     text.x =  (style.textAlign === 'center') ? width / 2.0
       : (style.textAlign === 'end' || style.textAlign === 'right') ? width - style.paddingRight : style.paddingLeft;
@@ -713,6 +718,16 @@ export default class DataSheet {
   }
 
   /**
+   * Get render for cell to format text.
+   * @param {Array} renders Array of render, first valid function will be used
+   * @return Render function or null if none is valid.
+   */
+  getCellRender(renders) {
+    if (!renders || !Array.isArray(renders)) return null;
+    return renders.find(r => !!r && typeof r === 'function');
+  }
+
+  /**
    * Calculate cells information
    * @param {*} columns columns from `update` fonction
    * @param {*} data header or cell data from `update` fonction.
@@ -740,7 +755,7 @@ export default class DataSheet {
           isHeader: d.isHeader || false,
           columns: columns,
           style: this.getCellStyle([this.defaultCellStyle, d.isHeader ? this.defaultHeaderStyle : null, c.style, d.style]),
-          formator: null
+          render: this.getCellRender([d.render, c.render])
         };
         row.push(item);
         startX += c.width;
@@ -781,6 +796,9 @@ export default class DataSheet {
       // Update style
       if (c.style) {
         current.style = this.getCellStyle([current.style, c.style]);
+      }
+      if (c.render) {
+        current.render = this.getCellRender([c.render, current.render]);
       }
     });
 
