@@ -39,39 +39,6 @@ export default class Editor {
     this.handlers[event] = undefined;
   }
 
-  prepare(x, y) {
-    this.el.focus();
-    this.el.style['left'] = `${x}px`;
-    this.el.style['top'] = `${y}px`;
-    
-    setTimeout(() => {
-      this.updateHeight();
-    }, 10);
-  }
-
-  show(value, width, rect) {
-    this.el.value = value || '';
-    this.el.style['left'] = `${rect.left}px`;
-    this.el.style['top'] = `${rect.top}px`;
-    this.el.style['width'] = `${rect.right - rect.left}px`;
-    this.el.style['height'] = `${rect.bottom - rect.top}px`;
-    this.el.style['z-index'] = '6';
-    this.el.style['min-width'] = `${Math.max(rect.right - rect.left, width, 100)}px`;
-    this.el.style['min-height'] = `${rect.bottom - rect.top}px`;
-    this.el.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
-  }
-
-  hide() {
-    this.el.style['z-index'] = '4';
-  }
-
-  update(x, y) {
-    this.el.focus();
-    this.el.style['z-index'] = '6';
-    this.el.style['left'] = `${x}px`;
-    this.el.style['top'] = `${y}px`;
-  }
-
   updateHeight() {
     let scrollHeight = this.el.scrollHeight;
     let maxHeight = this.canvasHeight > 100 ? this.canvasHeight : 100;
@@ -79,5 +46,37 @@ export default class Editor {
     if (scrollHeight > maxHeight) {
       this.el.style['overflow'] = 'auto';
     }
+  }
+
+  prepare(value, x, y, width, height, minHeight) {
+    this.el.focus();
+    this.el.value = value || '';
+    this.el.style['z-index'] = '6';
+    this.el.style['left'] = `${x}px`;
+    this.el.style['top'] = `${y}px`;
+    this.el.style['width'] = `${width}px`;
+    this.el.style['height'] = `${height}px`;
+    this.el.style['min-height'] = `${minHeight}px`;
+    this.el.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
+    setTimeout(() => {
+      this.updateHeight();
+    }, 10);
+  }
+
+  show(value) {
+    this.el.value = value || '';
+    this.el.style['z-index'] = '6';
+  }
+
+  hide() {
+    this.el.style['z-index'] = '-1000';
+  }
+
+  update(x, y, width) {
+    this.el.focus();
+    this.el.style['z-index'] = '6';
+    this.el.style['left'] = `${x}px`;
+    this.el.style['top'] = `${y}px`;
+    this.el.style['width'] = `${width}px`;
   }
 }

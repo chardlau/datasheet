@@ -144,6 +144,7 @@ export default class DataSheet {
     this.root.style['display'] = 'block';
     this.root.style['box-sizing'] = 'border-box';
     this.root.style['position'] = 'relative';
+    this.root.style['overflow'] = 'hidden';
   }
 
   // Initial stage of Createjs/EaselJs
@@ -346,7 +347,8 @@ export default class DataSheet {
   handleCellClick(cell) {
     this.isEditting = false;
     this.focusCell = cell;
-    this.editor.prepare(cell.x, cell.y);
+    let rect = this.getCrossCellRect(this.focusCell);
+    this.editor.prepare(cell.value, cell.x, cell.y, rect.right - rect.left, rect.bottom - rect.top, cell.height);
     this.render();
   }
 
@@ -358,7 +360,6 @@ export default class DataSheet {
 
   handleBeginEdit () {
     if (this.isEditting || !this.focusCell) return;
-    // Enable textarea for editing
     this.isEditting = true;
     this.focusCell.value = '';
     let rect = this.getCrossCellRect(this.focusCell);
@@ -407,7 +408,7 @@ export default class DataSheet {
 
     // Update textarea settings if currently in edit mode
     if (this.isEditting) {
-      this.editor.update(rect.left, rect.top);
+      this.editor.update(rect.left, rect.top, rect.right - rect.left);
     }
   }
 
