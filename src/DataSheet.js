@@ -32,6 +32,7 @@
  * 14. Support custom cell text format[Done]
  */
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
+import Editor from './Editor';
 import PointerEventHandler from './handler';
 import * as browser from './browser';
 import * as util from './util';
@@ -88,9 +89,6 @@ export default class DataSheet {
     // flag of whether selected cell is under editting
     this.isEditting = false;
 
-    // textarea input event handler
-    this._handleInput = this.handleInput.bind(this);
-
     // border color
     this.borderColor = '#CCC';
     // default cell style
@@ -127,31 +125,22 @@ export default class DataSheet {
     this.canvas.style['touch-action'] = 'none';
     this.canvas.style['z-index'] = '5';
 
-    this.textarea = document.createElement('textarea');
-    this.textarea.style['position'] = 'absolute';
-    this.textarea.style['left'] = '-10000px';
-    this.textarea.style['overflow'] = 'hidden';
-    this.textarea.style['border-color'] = '#3691FF';
-    this.textarea.style['outline'] = 'none';
-    this.textarea.style['z-index'] = '4';
-    this.textarea.style['display'] = 'block';
-    // Listen keyboard event
-    this.textarea.addEventListener('keydown', (evt) => {
-      if (evt.key === 'Enter' && evt.target == this.textarea) { // Enter key event
-        evt.preventDefault();
-        evt.stopPropagation();
-        this.isEditting = false;
-        this.hideTextArea();
-        this.render();
-        return false;
-      } else {
-        this.handleBeginEdit(evt);
-      }
-    }, false);
+    // Create editor
+    this.editor = new Editor();
+    this.editor.on('show', (evt) => {
+      this.handleBeginEdit(evt);
+    });
+    this.editor.on('hide', (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      this.isEditting = false;
+      this.hideTextArea();
+      this.render();
+    });
 
     this.root = typeof target === 'string' ? document.getElementById(target) : target;
     this.root.append(this.canvas);
-    this.root.append(this.textarea);
+    this.root.append(this.editor.el);
     this.root.style['display'] = 'block';
     this.root.style['box-sizing'] = 'border-box';
     this.root.style['position'] = 'relative';
@@ -357,9 +346,7 @@ export default class DataSheet {
   handleCellClick(cell) {
     this.isEditting = false;
     this.focusCell = cell;
-    this.textarea.focus();
-    this.textarea.style['left'] = `${cell.x}px`;
-    this.textarea.style['top'] = `${cell.y}px`;
+    this.editor.prepare(cell.x, cell.y);
     this.render();
   }
 
@@ -375,18 +362,12 @@ export default class DataSheet {
     this.isEditting = true;
     this.focusCell.value = '';
     let rect = this.getCrossCellRect(this.focusCell);
-    this.showTextArea(this.focusCell, rect, false);
+    this.showTextArea(this.focusCell, rect);
   }
 
-  handleInput() {
-    let scrollHeight = this.textarea.scrollHeight;
-    let maxHeight = this.canvasHeight > 100 ? this.canvasHeight : 100;
-    this.textarea.style['height'] = `${scrollHeight}px`;
-    if (scrollHeight > maxHeight) {
-      this.textarea.style['overflow'] = 'auto';
-    }
+  handleInput (evt, value) {
     if (this.focusCell) {
-      this.focusCell.value = this.textarea.value;
+      this.focusCell.value = value;
       this.focusCell.renderText = null;
     }
   }
@@ -426,36 +407,20 @@ export default class DataSheet {
 
     // Update textarea settings if currently in edit mode
     if (this.isEditting) {
-      this.updateTextArea(rect.left, rect.top);
+      this.editor.update(rect.left, rect.top);
     }
   }
 
   hideTextArea() {
-    this.textarea.style['z-index'] = '4';
-    this.textarea.removeEventListener('input', this._handleInput);
+    this.editor.hide();
+    this.editor.remove('input');
   }
 
-  showTextArea(cell, rect, adjustHeight = true) {
-    this.textarea.value = cell.value || '';
-    this.textarea.style.left = `${rect.left}px`;
-    this.textarea.style.top = `${rect.top}px`;
-    this.textarea.style.width = `${rect.right - rect.left}px`;
-    this.textarea.style.height = `${rect.bottom - rect.top}px`;
-    this.textarea.style['z-index'] = '6';
-    this.textarea.style['min-width'] = `${Math.max(rect.right - rect.left, cell.width, 100)}px`;
-    this.textarea.style['min-height'] = `${rect.bottom - rect.top}px`;
-    this.textarea.style['max-height'] = `${this.canvasHeight > 100 ? this.canvasHeight : 100}px`;
-    this.textarea.addEventListener('input', this._handleInput);
-    if (adjustHeight) {
-      setTimeout(this._handleInput, 10);
-    }
-  }
-
-  updateTextArea(left, top) {
-    this.textarea.focus();
-    this.textarea.style['z-index'] = '6';
-    this.textarea.style.left = `${left}px`;
-    this.textarea.style.top = `${top}px`;
+  showTextArea(cell, rect) {
+    this.editor.show(cell.value, cell.width, rect);
+    this.editor.on('input', (evt, value) => {
+      this.handleInput(evt, value);
+    });
   }
 
   renderCells(cells) {
