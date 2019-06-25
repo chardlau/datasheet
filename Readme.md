@@ -1,4 +1,9 @@
 
+## Install
+```
+npm install simple-datasheet
+```
+
 ## Usage
 
 Provide a container dom.

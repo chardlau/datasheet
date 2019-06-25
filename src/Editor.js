@@ -2,6 +2,9 @@ export default class Editor {
   constructor() {
     this.handlers = {};
 
+    // flag of whether is under editting mode
+    this.isEditting = false;
+
     this.el = document.createElement('textarea');
     this.el.style['position'] = 'absolute';
     this.el.style['left'] = '-10000px';
@@ -11,21 +14,54 @@ export default class Editor {
     this.el.style['z-index'] = '4';
     this.el.style['display'] = 'block';
 
-    // Listen keyboard event
     this.el.addEventListener('keydown', (evt) => {
-      if (evt.key === 'Enter' && evt.target == this.el) { // Enter key event
-        let handler = this.handlers['hide'];
-        handler && handler(evt);
-      } else {
-        let handler = this.handlers['show'];
-        handler && handler(evt);
+      const keyCode = evt.keyCode || evt.which;
+      const { ctrlKey, metaKey } = evt;
+      // Ctrl/Cmd/F1~F12/
+      if (ctrlKey || metaKey || (keyCode >= 112 && keyCode <= 123)) {
+        return;
+      }
+      switch (keyCode) {
+      case 13: { // Enter
+        evt.preventDefault();
+        if (this.isEditting) {
+          this.isEditting = false;
+          let handler = this.handlers['hide'];
+          handler && handler(evt);
+        } else {
+          this.isEditting = true;
+          let handler = this.handlers['show'];
+          handler && handler(evt);
+        }
+        break;
+      }
+      case 37: // Left
+      case 38: // Up
+      case 39: // Right
+      case 40: // Down
+      case 16: // Shift
+      case 18: // Alt
+      case 20: // CapsLock
+      case 27: // Escape
+      case 9: // Tab
+        break;
+      default: {
+        if (!this.isEditting) {
+          this.isEditting = true;
+          let handler = this.handlers['show'];
+          handler && handler(evt);
+        }
+        break;
+      }
       }
     }, false);
     // Listen input event
     this.el.addEventListener('input', (evt) => {
-      this.updateHeight();
-      let handler = this.handlers['input'];
-      handler && handler(evt, this.el.value);
+      if (this.isEditting) {
+        this.updateHeight();
+        let handler = this.handlers['input'];
+        handler && handler(evt, this.el.value);
+      }
     });
   }
 
@@ -49,9 +85,11 @@ export default class Editor {
   }
 
   prepare(value, x, y, width, height, minHeight) {
+    this.isEditting = false;
+
     this.el.focus();
     this.el.value = value || '';
-    this.el.style['z-index'] = '6';
+    this.el.style['z-index'] = '-1000';
     this.el.style['left'] = `${x}px`;
     this.el.style['top'] = `${y}px`;
     this.el.style['width'] = `${width}px`;
@@ -64,6 +102,7 @@ export default class Editor {
   }
 
   show(value) {
+    this.isEditting = true;
     this.el.value = value || '';
     this.el.style['z-index'] = '6';
   }
@@ -74,7 +113,6 @@ export default class Editor {
 
   update(x, y, width) {
     this.el.focus();
-    this.el.style['z-index'] = '6';
     this.el.style['left'] = `${x}px`;
     this.el.style['top'] = `${y}px`;
     this.el.style['width'] = `${width}px`;

@@ -86,9 +86,6 @@ export default class DataSheet {
     // current selected cell
     this.focusCell = null;
 
-    // flag of whether selected cell is under editting
-    this.isEditting = false;
-
     // border color
     this.borderColor = '#CCC';
     // default cell style
@@ -130,10 +127,7 @@ export default class DataSheet {
     this.editor.on('show', (evt) => {
       this.handleBeginEdit(evt);
     });
-    this.editor.on('hide', (evt) => {
-      evt.preventDefault();
-      evt.stopPropagation();
-      this.isEditting = false;
+    this.editor.on('hide', () => {
       this.hideTextArea();
       this.render();
     });
@@ -345,7 +339,6 @@ export default class DataSheet {
   }
 
   handleCellClick(cell) {
-    this.isEditting = false;
     this.focusCell = cell;
     let rect = this.getCrossCellRect(this.focusCell);
     this.editor.prepare(cell.value, cell.x, cell.y, rect.right - rect.left, rect.bottom - rect.top, cell.height);
@@ -353,15 +346,17 @@ export default class DataSheet {
   }
 
   handleCellDblclick() {
-    this.isEditting = true;
     let rect = this.getCrossCellRect(this.focusCell);
     this.showTextArea(this.focusCell, rect);
   }
 
-  handleBeginEdit () {
-    if (this.isEditting || !this.focusCell) return;
-    this.isEditting = true;
-    this.focusCell.value = '';
+  handleBeginEdit (evt) {
+    if (!this.focusCell) return;
+    const keyCode = evt.keyCode || evt.which;
+    console.log('handleBeginEdit keyCode: ', keyCode);
+    if (keyCode != 13) { // reset cell if begin is no trigger by Enter key
+      this.focusCell.value = '';
+    }
     let rect = this.getCrossCellRect(this.focusCell);
     this.showTextArea(this.focusCell, rect);
   }
@@ -388,14 +383,20 @@ export default class DataSheet {
   }
 
   renderFocusCell(cell) {
-    // Whatever happend, hide textarea and remove its handler
-    this.hideTextArea();
-
-    if (!cell) return;
+    if (!cell) {
+      // Hide textarea
+      this.editor.update(-1000, -1000, 0);
+      return;
+    }
 
     let rect = this.getCrossCellRect(cell);
-    if (!rect) return;
+    if (!rect) {
+      // Hide textarea
+      this.editor.update(-1000, -1000, 0);
+      return;
+    }
 
+    // Render cell
     if (!this.focusCellComponent) {
       this.focusCellComponent = new Shape();
     }
@@ -406,10 +407,8 @@ export default class DataSheet {
     this.focusCellComponent.x = rect.left;
     this.focusCellComponent.y = rect.top;
 
-    // Update textarea settings if currently in edit mode
-    if (this.isEditting) {
-      this.editor.update(rect.left, rect.top, rect.right - rect.left);
-    }
+    // Update textarea
+    this.editor.update(rect.left, rect.top, rect.right - rect.left);
   }
 
   hideTextArea() {
