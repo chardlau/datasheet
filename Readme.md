@@ -17,8 +17,10 @@ Provide a container dom.
 Create DataSheet and update options.
 
 ``` javascript
-var options = {...};
-var dataSheet = new DataSheet("target");
+import DataSheet from 'simple-datasheet';
+
+let options = {...};
+let dataSheet = new DataSheet("target");
 dataSheet.update(options);
 ```
 
