@@ -39,7 +39,7 @@
     var dataSheet2 = new DataSheet("target2");
     var commonStyle = { backgroundColor: '#b4ddea', color: '#2996b0' };
     var columns2 = [
-      { title: '标题1', width: 150, dataIndex: 'index1', fixed: 'left', style: commonStyle },
+      { title: '标题1', width: 150, dataIndex: 'index1', fixed: 'left', style: commonStyle, readOnly: true },
       { title: '标题2', width: 100, dataIndex: 'index2', fixed: 'left', style: commonStyle },
       { title: '标题3', width: 150, dataIndex: 'index3' },
       { title: '标题4', width: 200, dataIndex: 'index4' },
@@ -52,6 +52,7 @@
     var header2 = [];
     for (i = 0; i < 2; i++) {
       let item = {
+        readOnly: false,
         style: {
           textAlign: 'center',
           verticalAlign: 'middle'
@@ -86,7 +87,7 @@
       columns: columns2,
       header: header2,
       headerDesc: [
-        { row: 0, col: 0, colSpan: 2, render: () => 'Render Value' },
+        { row: 0, col: 0, colSpan: 2, render: () => 'Render Value', readOnly: true },
         { row: 0, col: 2, colSpan: 5, style: commonStyle },
         { row: 0, col: 7, colSpan: 2 },
       ],

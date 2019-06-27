@@ -28,7 +28,17 @@ dataSheet.update(options);
 
 See `example` directory.
 
+Just clone this repository from github. In the project directory, run `npm install` to download dependecies and run `npm start`.
+
+
 ## Options
+
+1. Options take effect in the order: desc > data > column;
+
+2. `readOnly` is set to `true` for header cell while `false` for data cell;
+
+3. Keywords such as `style` `render` `isHeader` `readOnly`, which should not be the key of `data` or value of `dataIndex` in `columns` option element.
+
 #### columns
 
 Array of column description 
@@ -39,6 +49,7 @@ Array of column description
 * fixed: Only 'left' or 'right' is valid. (Note：`fixed` will effect the final order of the column. 'left' fixed column will be sorted forward while 'right' fixed column will be backward.) 
 * style: Style for current column's cells.
 * render: Text formatter function for current column's cells.
+* readOnly: Flag indicates whether the cells in current column is editable or not.
 
 
 #### data [optional]

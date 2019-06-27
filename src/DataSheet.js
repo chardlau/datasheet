@@ -30,6 +30,7 @@
  * 12. Support basic cell's style configuration[Done]
  * 13. Selected cell listens keyboard event and enter edit mode[Done]
  * 14. Support custom cell text format[Done]
+ * 15. Support readOnly option for cell[Done]
  */
 import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
 import Editor from './Editor';
@@ -346,14 +347,14 @@ export default class DataSheet {
   }
 
   handleCellDblclick() {
+    if (this.focusCell.readOnly) return;
     let rect = this.getCrossCellRect(this.focusCell);
     this.showTextArea(this.focusCell, rect);
   }
 
   handleBeginEdit (evt) {
-    if (!this.focusCell) return;
+    if (!this.focusCell || this.focusCell.readOnly) return;
     const keyCode = evt.keyCode || evt.which;
-    console.log('handleBeginEdit keyCode: ', keyCode);
     if (keyCode != 13) { // reset cell if begin is no trigger by Enter key
       this.focusCell.value = '';
     }
@@ -720,8 +721,11 @@ export default class DataSheet {
           isHeader: d.isHeader || false,
           columns: columns,
           style: this.getCellStyle([this.defaultCellStyle, d.isHeader ? this.defaultHeaderStyle : null, c.style, d.style]),
-          render: this.getCellRender([d.render, c.render])
+          render: this.getCellRender([d.render, c.render]),
+          readOnly: d.isHeader || false,
         };
+        if (c.hasOwnProperty('readOnly')) item.readOnly = c.readOnly;
+        if (d.hasOwnProperty('readOnly')) item.readOnly = d.readOnly;
         row.push(item);
         startX += c.width;
       }
@@ -762,8 +766,13 @@ export default class DataSheet {
       if (c.style) {
         current.style = this.getCellStyle([current.style, c.style]);
       }
+      // Update render
       if (c.render) {
         current.render = this.getCellRender([c.render, current.render]);
+      }
+      // Update readOnly
+      if (c.hasOwnProperty('readOnly')) {
+        current.readOnly = c.readOnly;
       }
     });
 
