@@ -89,6 +89,8 @@ export default class DataSheet {
 
     // border color
     this.borderColor = '#CCC';
+    // highlight color
+    this.highlightColor = '#3691FF';
     // default cell style
     this.defaultCellStyle = {
       paddingLeft: 4,
@@ -329,6 +331,22 @@ export default class DataSheet {
       // If `renderText` is not exist, calculate
       cell.renderText = this.getEllipsisText(text, cell);
     }
+    if (!cell.hitArea) {
+      let r = text.getBounds();
+      let hit = new Shape();
+      hit.graphics.beginFill('#000').drawRect(r.x, r.y, r.width, r.height);
+      cell.hitArea = hit;
+    }
+    text.hitArea = cell.hitArea;
+    text.on('click', () => { console.log('text click'); });
+    text.on('mouseover', (evt) => {
+      evt.target.color = this.highlightColor;
+      this.stage.update();
+    });
+    text.on('mouseout', (evt) => {
+      evt.target.color = style.color;
+      this.stage.update();
+    });
 
     container.mouseEnabled = true;
     container.x = cell.x;
@@ -343,7 +361,8 @@ export default class DataSheet {
     this.focusCell = cell;
     let rect = this.getCrossCellRect(this.focusCell);
     this.editor.prepare(cell.value, cell.x, cell.y, rect.right - rect.left, rect.bottom - rect.top, cell.height);
-    this.render();
+    this.renderFocusCell(this.focusCell); // The shape insert into stage can be reused by render function
+    this.stage.update();
   }
 
   handleCellDblclick() {
@@ -403,7 +422,7 @@ export default class DataSheet {
     }
     this.stage.addChild(this.focusCellComponent);
     this.focusCellComponent.graphics.clear()
-      .beginStroke('#3691FF')
+      .beginStroke(this.highlightColor)
       .drawRect(0, 0, rect.right - rect.left, rect.bottom - rect.top);
     this.focusCellComponent.x = rect.left;
     this.focusCellComponent.y = rect.top;
