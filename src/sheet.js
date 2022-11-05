@@ -173,14 +173,14 @@ export default class DataSheet {
     handler.register(
       stage.canvas,
       (evt, deltaX, deltaY) => {
+        evt.preventDefault();
         this.updateScrollX(deltaX);
         this.updateScrollY(deltaY);
-
-        // evt.preventDefault();
-        if (this.shouldPreventDefault(deltaX)) {
-          evt.preventDefault();
-        }
         this.render();
+
+        if (this.shouldPreventDefault(deltaX)) {
+          return true;
+        }
       },
     );
     this.stage = stage;
@@ -212,12 +212,11 @@ export default class DataSheet {
    * Check whether should this component consume the scoll event.
    * @param {Number} deltaX Delta of scroll X
    */
-  shouldPreventDefault(deltaX) {
+  shouldPreventDefault() {
     // TODO
     const maxH = Math.max(this.totalHeight - this.canvasHeight + this.headerHeight, 0);
-    console.log('should:', (this.scrollY !== 0 && this.scrollY !== maxH));
     // If moving in horizontal direction, or scroll Y did not reach top or bottom edge
-    return true; // (this.scrollY !== 0 && this.scrollY !== maxH);
+    return (this.scrollY !== 0 && this.scrollY !== maxH);
   }
 
   /**

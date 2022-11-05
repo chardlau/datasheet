@@ -2,15 +2,17 @@
   "name": "simple-datasheet",
   "version": "0.0.3",
   "description": "A table component base on CreateJs/EaselJS for displaying large scale number of data on web page.",
-  "main": "index.js",
+  "main": "dist/main.js",
+  "module": "src/index.js",
+  "type": "module",
   "scripts": {
-    "start": "webpack-dev-server",
+    "build": "rollup -c",
+    "start": "rollup -c rollup.config.dev.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "datasheet",
-    "canvas",
-    "easeljs"
+    "sheet",
+    "canvas"
   ],
   "author": "chardlau",
   "homepage": "https://github.com/chardlau/simple-datasheet",
@@ -23,8 +25,9 @@
     "createjs-module": "^0.8.3"
   },
   "devDependencies": {
-    "webpack": "^4.34.0",
-    "webpack-cli": "^3.3.4",
-    "webpack-dev-server": "^3.7.1"
+    "@rollup/plugin-commonjs": "^23.0.2",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "rollup": "^3.2.5",
+    "rollup-plugin-serve": "^2.0.1"
   }
 }
