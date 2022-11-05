@@ -32,9 +32,9 @@
  * 14. Support custom cell text format[Done]
  * 15. Support readOnly option for cell[Done]
  */
-import { Tween, Ease, Container, Stage, Shape, Text } from 'createjs-module';
-import Editor from './Editor';
-import PointerEventHandler from './handler';
+import { Container, Stage, Shape, Text } from 'createjs-module';
+import Editor from './input';
+import EventHandler from './handler';
 import * as browser from './browser';
 import * as util from './util';
 
@@ -169,58 +169,20 @@ export default class DataSheet {
     stage.mouseEnabled = true;
     stage.mouseMoveOutside = true;
     stage.scaleX = stage.scaleY = ratio;
+    let handler = new EventHandler();
+    handler.register(
+      stage.canvas,
+      (evt, deltaX, deltaY) => {
+        this.updateScrollX(deltaX);
+        this.updateScrollY(deltaY);
 
-    // Handle wheel event for most part of browsers
-    canvas.addEventListener('wheel', (evt) => {
-      // TODO deltaMode is 1 or 2 need more explicit calculate
-      // * jquery defines:
-      // lineHeight: parseInt($parent.css('fontSize'), 10) || parseInt($elem.css('fontSize'), 10) || 16;
-      // pageHeight: $(elem).height();
-      // * Here we defines:
-      // lineHeight: 16
-      // pageHeight: this.canvasHeight || rect.height
-      let deltaX = evt.deltaMode === 1 ? evt.deltaX * 16 : evt.deltaMode === 2 ? evt.deltaX * this.canvasHeight : evt.deltaX;
-      let deltaY = evt.deltaMode === 1 ? evt.deltaY * 16 : evt.deltaMode === 2 ? evt.deltaY * this.canvasHeight : evt.deltaY;
-      this.updateScrollX(deltaX);
-      this.updateScrollY(deltaY);
-      if (this.shouldPreventDefault(deltaX)) {
-        evt.preventDefault();
-      }
-      this.render();
-    }, false);
-    // For Desktop Edge browser, use pointer event to perform scolling cause it doesn't support wheel event
-    if (browser.isEdge() && !browser.isMobileBrowser()) {
-      let handler = new PointerEventHandler();
-      handler.register(
-        stage.canvas,
-        (evt) => {
+        // evt.preventDefault();
+        if (this.shouldPreventDefault(deltaX)) {
           evt.preventDefault();
-        },
-        (evt, deltaX, deltaY) => {
-          this.updateScrollX(deltaX);
-          this.updateScrollY(deltaY);
-          if (this.shouldPreventDefault(deltaX)) {
-            evt.preventDefault();
-          }
-          this.render();
-        },
-        (evt, deltaX, deltaY) => {
-          let config = { deltaX, deltaY };
-          // 模拟滚动惯性
-          Tween.get(config)
-            .to({ deltaX: 0, deltaY: 0 }, 1000, Ease.getPowOut(2))
-            .on('change', () => {
-              if (handler.isHandling()) {
-                Tween.removeAllTweens(config);
-                return;
-              }
-              this.updateScrollX(config.deltaX);
-              this.updateScrollY(config.deltaY);
-              this.render();
-            });
         }
-      );
-    }
+        this.render();
+      },
+    );
     this.stage = stage;
   }
 
@@ -251,9 +213,11 @@ export default class DataSheet {
    * @param {Number} deltaX Delta of scroll X
    */
   shouldPreventDefault(deltaX) {
-    const max = Math.max(this.totalHeight - this.canvasHeight + this.headerHeight, 0);
+    // TODO
+    const maxH = Math.max(this.totalHeight - this.canvasHeight + this.headerHeight, 0);
+    console.log('should:', (this.scrollY !== 0 && this.scrollY !== maxH));
     // If moving in horizontal direction, or scroll Y did not reach top or bottom edge
-    return Math.abs(deltaX) > 0 || (this.scrollY !== 0 && this.scrollY !== max);
+    return true; // (this.scrollY !== 0 && this.scrollY !== maxH);
   }
 
   /**

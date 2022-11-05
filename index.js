@@ -1,3 +1,3 @@
-import DataSheet from './src/DataSheet';
-export default DataSheet;
+import Sheet from './src/sheet';
+export default Sheet;
 
