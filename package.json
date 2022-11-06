@@ -1,6 +1,6 @@
 {
   "name": "@chardlau/datasheet",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A table component base on CreateJs/EaselJS for displaying large scale number of data on web page.",
   "main": "dist/main.js",
   "module": "src/index.js",
