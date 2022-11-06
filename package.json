@@ -15,11 +15,11 @@
     "canvas"
   ],
   "author": "chardlau",
-  "homepage": "https://github.com/chardlau/simple-datasheet",
+  "homepage": "https://github.com/chardlau/datasheet",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:chardlau/simple-datasheet.git"
+    "url": "git@github.com:chardlau/datasheet.git"
   },
   "dependencies": {
     "createjs-module": "^0.8.3"

@@ -1,7 +1,7 @@
 
 ## Install
 ```
-npm install simple-datasheet
+npm install @chardlau/datasheet
 ```
 
 ## Usage
@@ -9,15 +9,13 @@ npm install simple-datasheet
 Provide a container dom.
 
 ``` html
-...
 <div id="target" style="height: 200px"></div>
-...
 ```
 
 Create DataSheet and update options.
 
 ``` javascript
-import DataSheet from 'simple-datasheet';
+import DataSheet from '@chardlau/datasheet';
 
 let options = {...};
 let dataSheet = new DataSheet("target");
